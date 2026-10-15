@@ -111,6 +111,15 @@ def run_tool(conn: sqlite3.Connection, name: str, args: dict) -> dict:
     return {"error": f"Unknown tool {name}"}
 
 
+def _drop_translations(value):
+    """Telugu copies (*_te) are for the UI; the model translates itself, so don't spend tokens on them."""
+    if isinstance(value, dict):
+        return {k: _drop_translations(v) for k, v in value.items() if not k.endswith("_te")}
+    if isinstance(value, list):
+        return [_drop_translations(v) for v in value]
+    return value
+
+
 def tool_result_text(result: dict) -> str:
-    text = json.dumps(result, separators=(",", ":"), default=str)
+    text = json.dumps(_drop_translations(result), separators=(",", ":"), default=str)
     return text if len(text) <= MAX_TOOL_RESULT_CHARS else text[:MAX_TOOL_RESULT_CHARS] + "...(truncated)"

@@ -25,6 +25,7 @@ Net-meter feasibility is usually a manual engineering judgement. SolarClear turn
 | Alerts | Overvoltage, reverse-flow, saturation and pipeline alerts, each with a severity. Alerts can be acknowledged. |
 | Network assets (CRUD) | Admins add, upgrade (change kVA) and delete feeders and DTRs. Upgrading a DTR raises its hosting capacity straight away. |
 | Agent log | Audit trail of every agent run: tools used and tokens spent. |
+| English and Telugu (తెలుగు) | A one-click language switch on the login screen and in the sidebar. See the "Languages" section below. |
 | Offline mode | Without Azure keys, a rule-based router answers through the same tools. Without internet access, a clear-sky weather model replaces Open-Meteo. |
 
 ## Technology stack
@@ -37,7 +38,7 @@ Net-meter feasibility is usually a manual engineering judgement. SolarClear turn
 | AI agent | Azure OpenAI chat completions with tool calling (`openai` SDK) | Uses the team's existing Azure deployment. |
 | External API | [Open-Meteo](https://open-meteo.com) hourly irradiance and temperature forecast | Free and needs no key. A clear-sky model is used as fallback. |
 | Frontend | One HTML page with vanilla JS and CSS, charts drawn in hand-written SVG | No build step and no CDN. Supports light and dark themes and works on mobile. |
-| Tests | pytest with FastAPI TestClient | 53 tests that run offline in about 6 seconds. |
+| Tests | pytest with FastAPI TestClient | 64 tests that run offline in about 6 seconds. |
 
 ## Project structure
 
@@ -166,6 +167,20 @@ python -m uvicorn app.main:app --reload --port 8000
 4. On **Applications**, submit a request. It is evaluated straight away. Approve it with the recommended kW, and the DTR's installed PV and headroom update at once.
 5. Ask the **Planning Copilot** questions in plain English. Each answer shows which tools it called and how many tokens it used.
 6. Sign in as the **admin** and go to **Network assets** to add a DTR or upgrade one's kVA. This is the remedy for a saturated DTR.
+
+## Languages: English and Telugu
+
+The whole application works in **English** and **Telugu (తెలుగు)**. Switch with the `English | తెలుగు` control on the login card or in the sidebar. The choice is remembered for next time.
+
+| Part | How it is translated |
+|---|---|
+| UI text (menus, tables, charts, forms, prompts, errors) | `static/locales/en.json` and `static/locales/te.json`. The page applies them at runtime. |
+| Text the server generates (clearance reasons, alerts, scan summary) | Templates in `app/i18n.py`. Reasons and alerts are stored in both languages (`decision_reason_te`, `message_te`), so switching language is instant. |
+| D360 AI Copilot and shift brief | The client sends `X-Lang: te`. The agent then replies in Telugu and keeps DTR codes, numbers and units as they are. Tool results are sent to the model in English to save tokens. |
+| Offline copilot | Understands Telugu keywords, for example సంతృప్త, అంచనా, వోల్టేజ్, ప్రమాదం, దరఖాస్తు and కుసుమ్, and answers in Telugu. |
+| Font | Noto Sans Telugu from Google Fonts, with a taller line height for Telugu script. |
+
+To add another language, add a file such as `static/locales/hi.json`, add a `hi` entry to each message in `app/i18n.py`, and add a button to the language switch.
 
 ## How the analytics work
 

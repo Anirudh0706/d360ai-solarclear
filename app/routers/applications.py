@@ -4,6 +4,7 @@ import sqlite3
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
 from app.database import fetch_all, fetch_one, get_db
+from app.i18n import both
 from app.schemas import ApplicationIn, ApplicationUpdate, DecisionIn
 from app.security import current_user
 from app.services.clearance import approve_application, evaluate_application
@@ -63,7 +64,8 @@ def update_application(app_id: int, body: ApplicationUpdate, conn: sqlite3.Conne
         # Any edit invalidates the previous evaluation.
         assignments = ", ".join(f"{k} = ?" for k in changes)
         conn.execute(f"UPDATE applications SET {assignments}, status = 'pending', recommendation = NULL, "
-                     f"recommended_kw = NULL, decision_reason = NULL WHERE id = ?", (*changes.values(), app_id))
+                     f"recommended_kw = NULL, decision_reason = NULL, decision_reason_te = NULL WHERE id = ?",
+                     (*changes.values(), app_id))
     return _get(conn, app_id)
 
 
@@ -101,10 +103,11 @@ def decide(app_id: int, body: DecisionIn, conn: sqlite3.Connection = Depends(get
         new_status = "approved"
     else:
         approved_kw, new_status = None, "rejected"
-    note = f" Engineer note: {body.note}" if body.note else ""
+    note, note_te = both("clear.note", note=body.note) if body.note else ("", "")
     conn.execute(
         "UPDATE applications SET status = ?, approved_kw = ?, decided_by = ?, decided_at = datetime('now'), "
-        "decision_reason = COALESCE(decision_reason, '') || ? WHERE id = ?",
-        (new_status, approved_kw, user["id"], note, app_id),
+        "decision_reason = COALESCE(decision_reason, '') || ?, "
+        "decision_reason_te = COALESCE(decision_reason_te, '') || ? WHERE id = ?",
+        (new_status, approved_kw, user["id"], note, note_te, app_id),
     )
     return _get(conn, app_id)

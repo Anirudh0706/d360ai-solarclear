@@ -23,6 +23,7 @@ from datetime import datetime
 from app.analytics.solar import linear_fit, percentile, pv_output_kw
 from app.config import settings
 from app.database import fetch_all, fetch_one
+from app.i18n import both, tr, word
 from app.services.weather import get_forecast
 
 HISTORY_HOURS = 336  # 14 days of hourly readings
@@ -283,15 +284,16 @@ def detect_risks(conn: sqlite3.Connection, feeder_id: int | None = None, hours: 
             if risk == "overvoltage":
                 peak = max(p["voltage_pu"] for p in hits)
                 severe = peak >= settings.voltage_upper_pu + 0.02
-                detail = f"voltage up to {peak:.3f} pu (limit {settings.voltage_upper_pu})"
+                detail, detail_te = both("risk.overvoltage", peak=peak, limit=settings.voltage_upper_pu)
             else:
                 peak = max(p["net_export_kw"] for p in hits)
                 severe = peak >= rating
-                detail = f"reverse flow up to {peak:.0f} kW ({peak / rating * 100:.0f}% of {rating:.0f} kVA)"
+                detail, detail_te = both("risk.reverse_flow", peak=peak, pct=peak / rating * 100, kva=rating)
             events.append({
                 "dtr_id": row["id"], "dtr_code": fc["dtr_code"], "risk": risk,
                 "severity": "critical" if severe else "warning",
-                "first_at": hits[0]["ts"], "hours": len(hits), "peak": round(peak, 3), "detail": detail,
+                "first_at": hits[0]["ts"], "hours": len(hits), "peak": round(peak, 3),
+                "detail": detail, "detail_te": detail_te,
             })
     events.sort(key=lambda e: (e["severity"] != "critical", e["first_at"]))
     return events
@@ -315,27 +317,25 @@ def evaluate_request(
             headroom, constraint = feeder["hosting_kw"], feeder["binding_constraint"]
 
     headroom = max(0.0, headroom)
-    labels = {"reverse_flow": "reverse power flow", "voltage": "voltage rise", "policy_cap": "regulatory DTR cap",
-              "feeder_reverse_flow": "11 kV feeder reverse flow", "sum_of_dtrs": "DTR limits on the feeder"}
-    basis = (f"{hc['dtr_code']} ({hc['rating_kva']:.0f} kVA) has {hc['existing_pv_kw']} kW PV installed, "
-             f"hosting capacity {hc['hosting_kw']} kW limited by {labels.get(constraint, constraint)}, "
-             f"{queued:.1f} kW already queued ahead.")
-
     if requested_kw <= headroom:
         rec, rec_kw = "clear", requested_kw
-        reason = f"Feasible: {requested_kw} kW fits within {headroom:.1f} kW headroom. {basis}"
     elif headroom >= 1.0:
         rec, rec_kw = "partial", math.floor(headroom * 2) / 2
-        reason = (f"Partially feasible: only {rec_kw} kW can be cleared without breaching limits "
-                  f"(or sanction {requested_kw} kW with export limiting). {basis}")
     else:
         rec, rec_kw = "reject", 0.0
-        reason = f"Not feasible: DTR is saturated (headroom {headroom:.1f} kW). Needs DTR augmentation. {basis}"
+
+    # Reason text in English and Telugu (both are stored with the application).
+    reasons = {}
+    for lang in ("en", "te"):
+        basis = tr("clear.basis", lang, dtr=hc["dtr_code"], kva=f"{hc['rating_kva']:.0f}", pv=hc["existing_pv_kw"],
+                   hc=hc["hosting_kw"], label=word(f"limit.{constraint}"), queued=f"{queued:.1f}")
+        reasons[lang] = tr(f"clear.{rec}", lang, kw=requested_kw, rec=rec_kw, headroom=f"{headroom:.1f}", basis=basis)
+    reason = reasons["en"]
 
     return {
         "dtr_id": dtr_id, "dtr_code": hc["dtr_code"], "scheme": scheme,
         "requested_kw": requested_kw, "recommendation": rec, "recommended_kw": rec_kw,
         "headroom_kw": round(headroom, 1), "queued_ahead_kw": round(queued, 1),
-        "binding_constraint": constraint, "reason": reason,
+        "binding_constraint": constraint, "reason": reason, "reason_te": reasons["te"],
         "evaluated_at": datetime.now().isoformat(timespec="seconds"),
     }

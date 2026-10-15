@@ -8,7 +8,7 @@
 * The Azure tool-calling loop is tested with a fake client.
 * Each test module gets a fresh SQLite database with the seeded sample data.
 
-**Latest run:** 53 passed, 0 failed, in 6.1 s (Python 3.12.10, Windows 11).
+**Latest run:** 64 passed, 0 failed, in 5.6 s (Python 3.12.10, Windows 11).
 
 ## Test cases
 
@@ -90,6 +90,22 @@
 | 52 | Scan with an AI brief | Exactly 1 LLM call | As expected | Pass |
 | 53 | Bad tool arguments (text kW, negative kW, unknown feeder, unknown tool) | Error returned as data | As expected | Pass |
 
+### English and Telugu ([tests/test_i18n.py](../tests/test_i18n.py))
+
+| # | Test case | Expected result | Actual result | Status |
+|---|---|---|---|---|
+| 54 | The English and Telugu UI files have the same keys | No key missing from Telugu | None missing | Pass |
+| 55 | Every `t("key")` in `app.js` and every `data-i18n` in `index.html` | Each key exists in both languages | All exist | Pass |
+| 56 | Telugu UI text for key labels | Written in Telugu script | As expected | Pass |
+| 57 | Every server message template | Has both an English and a Telugu version | As expected | Pass |
+| 58 | Feasibility check on a saturated DTR | English reason and Telugu `reason_te`, both containing the DTR code | As expected | Pass |
+| 59 | Application whose applicant name is in Telugu (రమేష్) | Name is saved and read back correctly; reason stored in both languages | As expected | Pass |
+| 60 | Grid-Watch scan with `X-Lang: te` | Summary in Telugu; every alert has a Telugu message | As expected | Pass |
+| 61 | Offline copilot asked a Telugu question about kW on a DTR | Uses the feasibility tool; answer in Telugu ("అనుమతించవచ్చు") | As expected | Pass |
+| 62 | Telugu keywords such as సంతృప్త (saturated) and వోల్టేజ్ ప్రమాదం (voltage risk) | Routed to the right tool | As expected | Pass |
+| 63 | Request with no language header | Answer in English | English | Pass |
+| 64 | Message formatting with a translated word and an unknown language | Telugu text produced; unknown language falls back to English | As expected | Pass |
+
 ## Manual and integration testing
 
 These checks ran against the live server (`uvicorn`), with the real Azure OpenAI deployment and the real Open-Meteo API.
@@ -103,6 +119,8 @@ These checks ran against the live server (`uvicorn`), with the real Azure OpenAI
 | Grid-Watch scan with an Azure brief | 537 prompt + 211 completion tokens. Prioritised 4-bullet brief naming DTR-S1-02, N1-03 and S1-04. |
 | Copilot: "Can I connect 8 kW rooftop on DTR-S1-04?" | Called `netmeter_feasibility`; answered *partial, 5.0 kW, voltage-bound*. 1,385 + 160 tokens. |
 | Copilot: "Which DTRs are saturated on feeder S1?" | Called `list_dtrs` twice; correct list. 1,477 + 256 tokens. |
+| Telugu scan with brief (`X-Lang: te`) | Summary, alerts and a 4-bullet brief, all in Telugu. 336 + 354 tokens. |
+| Telugu copilot: "DTR-S1-04 కి 8 kW రూఫ్‌టాప్ సిస్టమ్ కలపవచ్చా?" ("Can an 8 kW rooftop system be added on DTR-S1-04?") | Called `dtr_hosting_capacity` and `netmeter_feasibility`; answered in Telugu: not feasible, voltage-bound. |
 | Copilot: "How much more KUSUM solar can feeder S2 absorb?" | Called `network_overview`; answered 388.5 kW headroom. 1,510 + 150 tokens. |
 
 ## Bugs identified

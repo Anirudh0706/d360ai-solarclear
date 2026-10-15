@@ -15,10 +15,11 @@ def evaluate_application(conn: sqlite3.Connection, app_id: int) -> dict | None:
         """
         UPDATE applications
         SET status = 'evaluated', recommendation = ?, recommended_kw = ?, binding_constraint = ?,
-            decision_reason = ?, evaluated_at = datetime('now')
+            decision_reason = ?, decision_reason_te = ?, evaluated_at = datetime('now')
         WHERE id = ?
         """,
-        (result["recommendation"], result["recommended_kw"], result["binding_constraint"], result["reason"], app_id),
+        (result["recommendation"], result["recommended_kw"], result["binding_constraint"], result["reason"],
+         result["reason_te"], app_id),
     )
     return result
 

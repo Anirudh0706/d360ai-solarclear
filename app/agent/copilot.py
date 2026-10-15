@@ -1,9 +1,10 @@
-"""Planning Copilot: a tool-calling agent on Azure OpenAI.
+"""D360 AI Copilot: a tool-calling planning agent.
 
 Loop: model picks tools -> we run the deterministic analytics -> model writes the answer.
 Token budget: short system prompt, last 6 chat turns only (each clipped), compact JSON
-tool results, at most MAX_ROUNDS tool rounds. Without Azure credentials a rule-based
+tool results, at most MAX_ROUNDS tool rounds. Without LLM credentials a rule-based
 router answers the same questions with the same tools (mode = "offline").
+Languages: English and Telugu (lang = "en" | "te").
 """
 import json
 import re
@@ -11,6 +12,7 @@ import sqlite3
 
 from app.agent.llm import complete, get_client, usage_of
 from app.agent.tools import TOOL_SPECS, run_tool, tool_result_text
+from app.i18n import normalise, tr, word
 
 MAX_ROUNDS = 4
 HISTORY_TURNS = 6
@@ -23,6 +25,13 @@ SYSTEM_PROMPT = (
     "150 words, using short bullets, DTR/feeder codes and units (kW, kVA, pu). You recommend; engineers approve. "
     "If asked what you are, you are the D360 AI engine; do not name any underlying model or vendor."
 )
+TELUGU_INSTRUCTION = (
+    " Reply in clear, simple Telugu (తెలుగు script) suitable for field engineers. Keep DTR/feeder codes, numbers "
+    "and units (kW, kVA, pu) unchanged. Only DTR, feeder and voltage may stay in English; otherwise use Telugu: "
+    "hosting capacity = హోస్టింగ్ సామర్థ్యం, headroom = అదనపు సామర్థ్యం, queue = క్యూలో ఉన్న దరఖాస్తులు, "
+    "recommendation = సిఫారసు, approve = ఆమోదం, reject = తిరస్కరణ, augmentation = సామర్థ్యం పెంపు, "
+    "saturated = సంతృప్తం, reverse flow = రివర్స్ ఫ్లో, export = ఎగుమతి."
+)
 
 
 def _record(conn: sqlite3.Connection, user_id: int, question: str, result: dict) -> None:
@@ -34,22 +43,25 @@ def _record(conn: sqlite3.Connection, user_id: int, question: str, result: dict)
     )
 
 
-def chat(conn: sqlite3.Connection, user_id: int, message: str, history: list[dict] | None = None) -> dict:
+def chat(conn: sqlite3.Connection, user_id: int, message: str, history: list[dict] | None = None,
+         lang: str = "en") -> dict:
+    lang = normalise(lang)
     client = get_client()
     if client is None:
-        result = offline_answer(conn, message)
+        result = offline_answer(conn, message, lang)
     else:
         try:
-            result = _azure_chat(conn, client, message, history or [])
+            result = _llm_chat(conn, client, message, history or [], lang)
         except Exception as exc:  # network / quota / auth problem: degrade gracefully
-            result = offline_answer(conn, message)
-            result["answer"] = f"(D360 AI engine unavailable: {type(exc).__name__}. Rule-based answer.)\n\n" + result["answer"]
+            result = offline_answer(conn, message, lang)
+            result["answer"] = tr("bot.engine_down", lang, err=type(exc).__name__) + result["answer"]
     _record(conn, user_id, message, result)
     return result
 
 
-def _azure_chat(conn: sqlite3.Connection, client, message: str, history: list[dict]) -> dict:
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+def _llm_chat(conn: sqlite3.Connection, client, message: str, history: list[dict], lang: str) -> dict:
+    system = SYSTEM_PROMPT + (TELUGU_INSTRUCTION if lang == "te" else "")
+    messages = [{"role": "system", "content": system}]
     for turn in history[-HISTORY_TURNS:]:
         if turn.get("role") in ("user", "assistant") and turn.get("content"):
             messages.append({"role": turn["role"], "content": str(turn["content"])[:HISTORY_CHARS]})
@@ -82,7 +94,7 @@ def _azure_chat(conn: sqlite3.Connection, client, message: str, history: list[di
             messages.append({"role": "tool", "tool_call_id": call.id, "content": tool_result_text(result)})
 
     return {
-        "answer": answer or "I could not produce an answer within the token budget. Please narrow the question.",
+        "answer": answer or tr("bot.no_answer", lang),
         "tools_used": tools_used,
         "mode": "azure",
         "usage": {"prompt_tokens": prompt_tokens, "completion_tokens": completion_tokens},
@@ -91,29 +103,43 @@ def _azure_chat(conn: sqlite3.Connection, client, message: str, history: list[di
 
 # ---------------------------------------------------------------- offline router
 DTR_RE = re.compile(r"dtr[-\s]?([a-z]\d)[-\s]?(\d{1,2})", re.I)
-FEEDER_RE = re.compile(r"(?:fdr|feeder)[-\s]?([a-z]\d)\b", re.I)
+FEEDER_RE = re.compile(r"(?:fdr|feeder|ఫీడర్)[-\s]?([a-z]\d)\b", re.I)
 KW_RE = re.compile(r"(\d+(?:\.\d+)?)\s*kw", re.I)
 
+# Intent keywords in English and Telugu.
+KEYWORDS = {
+    "forecast": ("forecast", "tomorrow", "generation", "export", "next", "అంచనా", "రేపు", "ఉత్పత్తి", "ఎగుమతి"),
+    "risk": ("risk", "voltage", "reverse", "overvoltage", "ప్రమాద", "వోల్టేజ్", "రివర్స్"),
+    "saturated": ("saturat", "full", "no capacity", "watch", "సంతృప్త", "నిండి", "పర్యవేక్షణ"),
+    "watch": ("watch", "పర్యవేక్షణ"),
+    "applications": ("application", "pending", "దరఖాస్తు", "పెండింగ్"),
+    "kusum": ("kusum", "కుసుమ్"),
+}
 
-def offline_answer(conn: sqlite3.Connection, message: str) -> dict:
+
+def _has(text: str, intent: str) -> bool:
+    return any(w in text for w in KEYWORDS[intent])
+
+
+def offline_answer(conn: sqlite3.Connection, message: str, lang: str = "en") -> dict:
     """Keyword intent router over the same tools. Zero tokens, always available."""
     text = message.lower()
     dtr_m, feeder_m, kw_m = DTR_RE.search(message), FEEDER_RE.search(message), KW_RE.search(message)
     dtr_code = f"DTR-{dtr_m.group(1).upper()}-{int(dtr_m.group(2)):02d}" if dtr_m else None
     feeder_code = f"FDR-{feeder_m.group(1).upper()}" if feeder_m else None
-    scheme = "kusum" if "kusum" in text else "rooftop"
+    scheme = "kusum" if _has(text, "kusum") else "rooftop"
 
     if dtr_code and kw_m:
         tool, args = "netmeter_feasibility", {"dtr_code": dtr_code, "kw": float(kw_m.group(1)), "scheme": scheme}
-    elif dtr_code and any(w in text for w in ("forecast", "tomorrow", "generation", "export", "next")):
+    elif dtr_code and _has(text, "forecast"):
         tool, args = "solar_forecast", {"dtr_code": dtr_code, "hours": 48}
     elif dtr_code:
         tool, args = "dtr_hosting_capacity", {"dtr_code": dtr_code}
-    elif any(w in text for w in ("risk", "voltage", "reverse", "overvoltage")):
+    elif _has(text, "risk"):
         tool, args = "forecast_risks", {"feeder_code": feeder_code}
-    elif any(w in text for w in ("saturat", "full", "no capacity", "watch")):
-        tool, args = "list_dtrs", {"status": "watch" if "watch" in text else "saturated", "feeder_code": feeder_code}
-    elif "application" in text or "pending" in text:
+    elif _has(text, "saturated"):
+        tool, args = "list_dtrs", {"status": "watch" if _has(text, "watch") else "saturated", "feeder_code": feeder_code}
+    elif _has(text, "applications"):
         tool, args = "list_applications", {"status": "all"}
     elif feeder_code:
         tool, args = "list_dtrs", {"status": "all", "feeder_code": feeder_code}
@@ -121,47 +147,53 @@ def offline_answer(conn: sqlite3.Connection, message: str) -> dict:
         tool, args = "network_overview", {}
 
     result = run_tool(conn, tool, args)
-    return {"answer": _format(tool, result), "tools_used": [tool], "mode": "offline",
+    if "error" in result and dtr_code and "Unknown DTR" in result["error"]:
+        result = {"error": tr("bot.unknown_dtr", lang, code=args.get("dtr_code"))}
+    return {"answer": _format(tool, result, lang), "tools_used": [tool], "mode": "offline",
             "usage": {"prompt_tokens": 0, "completion_tokens": 0}}
 
 
-def _format(tool: str, r: dict) -> str:
+def _format(tool: str, r: dict, lang: str) -> str:
+    te = lang == "te"
     if "error" in r:
         return r["error"]
     if tool == "netmeter_feasibility":
-        return f"**{r['recommendation'].upper()}** - recommended {r['recommended_kw']} kW of {r['requested_kw']} kW.\n{r['reason']}"
+        return tr("bot.feasibility", lang, rec=word(f"rec.{r['recommendation']}"), rec_kw=r["recommended_kw"],
+                  kw=r["requested_kw"], reason=r["reason_te"] if te else r["reason"])
     if tool == "dtr_hosting_capacity":
         lim = r["limits_kw"]
-        months = f"{r['months_to_saturation']} months" if r["months_to_saturation"] is not None else "n/a"
-        return (f"**{r['dtr_code']}** ({r['rating_kva']:.0f} kVA, {r['feeder_code']}) - status **{r['status']}**\n"
-                f"- Installed PV {r['existing_pv_kw']} kW, utilisation {r['utilisation_pct']}%\n"
-                f"- Hosting capacity **{r['hosting_kw']} kW** (binding: {r['binding_constraint']})\n"
-                f"- Limits: reverse flow {lim['reverse_flow']} kW, voltage {lim['voltage']} kW, policy {lim['policy_cap']} kW\n"
-                f"- Queue {r['pending_kw']} kW pending; saturation in {months} at current adoption")
+        months = (tr("bot.months", lang, n=r["months_to_saturation"]) if r["months_to_saturation"] is not None
+                  else tr("bot.na", lang))
+        return tr("bot.hosting", lang, dtr=r["dtr_code"], kva=f"{r['rating_kva']:.0f}", feeder=r["feeder_code"],
+                  status=word(f"status.{r['status']}"), pv=r["existing_pv_kw"], util=r["utilisation_pct"],
+                  hc=r["hosting_kw"], label=word(f"limit.{r['binding_constraint']}"), rf=lim["reverse_flow"],
+                  v=lim["voltage"], pc=lim["policy_cap"], pending=r["pending_kw"], months=months)
     if tool == "solar_forecast":
         s = r["summary"]
-        line = (f"**{r['dtr_code']} forecast** ({r['weather_source']}): solar {s['solar_energy_kwh']} kWh, "
-                f"export {s['export_energy_kwh']} kWh, peak export {s['peak_export_kw']} kW, "
-                f"max voltage {s['max_voltage_pu']} pu, {s['risk_hours']} risk hour(s).")
-        return line + "".join(f"\n- {p['ts']}: {', '.join(p['risks'])} ({p['voltage_pu']} pu, {p['net_export_kw']} kW)"
-                              for p in r["risk_hours"])
+        line = tr("bot.forecast", lang, dtr=r["dtr_code"], src=r["weather_source"], s=s["solar_energy_kwh"],
+                  e=s["export_energy_kwh"], pe=s["peak_export_kw"], mv=s["max_voltage_pu"], rh=s["risk_hours"])
+        return line + "".join(
+            f"\n- {p['ts']}: {', '.join(tr(f'riskname.{x}', lang) for x in p['risks'])} "
+            f"({p['voltage_pu']} pu, {p['net_export_kw']} kW)" for p in r["risk_hours"])
     if tool == "forecast_risks":
         if not r["events"]:
-            return "No overvoltage or reverse-flow events forecast in the next 48 hours."
-        return f"**{r['count']} forecast risk event(s):**" + "".join(
-            f"\n- [{e['severity']}] {e['dtr_code']} {e['risk']}: {e['detail']}, {e['hours']} h from {e['first_at']}"
-            for e in r["events"])
+            return tr("bot.no_risks", lang)
+        return tr("bot.risks", lang, n=r["count"]) + "".join(
+            tr("bot.risk_line", lang, sev=word(f"status.{e['severity']}"), dtr=e["dtr_code"],
+               risk=word(f"riskname.{e['risk']}"), detail=e["detail_te"] if te else e["detail"],
+               hours=e["hours"], first=e["first_at"]) for e in r["events"])
     if tool == "list_dtrs":
         if not r["dtrs"]:
-            return "No DTRs match."
-        return f"**{r['count']} DTR(s):**" + "".join(
-            f"\n- {d['dtr_code']}: {d['utilisation_pct']}% used, {d['hosting_kw']} kW headroom ({d['status']})"
-            for d in r["dtrs"])
+            return tr("bot.no_dtrs", lang)
+        return tr("bot.dtrs", lang, n=r["count"]) + "".join(
+            tr("bot.dtr_line", lang, dtr=d["dtr_code"], util=d["utilisation_pct"], hc=d["hosting_kw"],
+               status=word(f"status.{d['status']}")) for d in r["dtrs"])
     if tool == "list_applications":
-        return "**Applications:**" + "".join(
-            f"\n- #{a['id']} {a['applicant_name']} {a['requested_kw']} kW on {a['dtr_code']}: {a['status']}"
-            + (f" -> {a['recommendation']} {a['recommended_kw']} kW" if a["recommendation"] else "")
+        return tr("bot.apps", lang) + "".join(
+            tr("bot.app_line", lang, id=a["id"], name=a["applicant_name"], kw=a["requested_kw"], dtr=a["dtr_code"],
+               status=word(f"status.{a['status']}"))
+            + (f" -> {tr('rec.' + a['recommendation'], lang)} {a['recommended_kw']} kW" if a["recommendation"] else "")
             for a in r["applications"])
-    return "**Network overview:**" + "".join(
-        f"\n- {f['feeder_code']}: {f['existing_pv_kw']} kW PV, {f['hosting_kw']} kW headroom, "
-        f"{f['saturated_dtrs']} saturated / {f['watch_dtrs']} watch DTRs" for f in r["feeders"])
+    return tr("bot.overview", lang) + "".join(
+        tr("bot.feeder_line", lang, f=f["feeder_code"], pv=f["existing_pv_kw"], hc=f["hosting_kw"],
+           sat=f["saturated_dtrs"], watch=f["watch_dtrs"]) for f in r["feeders"])

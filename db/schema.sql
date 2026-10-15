@@ -95,6 +95,7 @@ CREATE TABLE IF NOT EXISTS applications (
     recommended_kw     REAL,
     binding_constraint TEXT,
     decision_reason    TEXT,
+    decision_reason_te TEXT,              -- Telugu version of decision_reason
     approved_kw        REAL,
     created_by         INTEGER REFERENCES users(id) ON DELETE SET NULL,
     decided_by         INTEGER REFERENCES users(id) ON DELETE SET NULL,
@@ -109,6 +110,7 @@ CREATE TABLE IF NOT EXISTS alerts (
     alert_type   TEXT    NOT NULL CHECK (alert_type IN ('overvoltage', 'reverse_flow', 'saturation', 'pipeline')),
     severity     TEXT    NOT NULL CHECK (severity IN ('info', 'warning', 'critical')),
     message      TEXT    NOT NULL,
+    message_te   TEXT,                    -- Telugu version of message
     forecast_for TEXT,
     acknowledged INTEGER NOT NULL DEFAULT 0,
     created_at   TEXT    NOT NULL DEFAULT (datetime('now'))

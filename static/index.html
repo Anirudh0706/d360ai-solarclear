@@ -7,31 +7,35 @@
   <link rel="icon" type="image/png" href="/static/img/d360ai-logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Telugu:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap">
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
+  <!-- Texts marked data-i18n are filled from static/locales/{en,te}.json -->
   <!-- Login / registration -->
   <section id="auth-view" class="auth" hidden>
     <div class="auth-card">
+      <div class="lang-switch" role="group" aria-label="Language">
+        <button type="button" data-lang="en">English</button><button type="button" data-lang="te">తెలుగు</button>
+      </div>
       <img class="logo" src="/static/img/d360ai-logo-cropped.png" alt="D360 AI Vision">
-      <div class="product">SolarClear &middot; Grid Intelligence</div>
-      <p class="muted">AI-driven solar hosting capacity &amp; net-meter clearance for distribution utilities</p>
+      <div class="product" data-i18n="app.subtitle">SolarClear · Grid Intelligence</div>
+      <p class="muted" data-i18n="app.tagline"></p>
       <div class="tabs">
-        <button class="tab active" data-auth-tab="login">Sign in</button>
-        <button class="tab" data-auth-tab="register">Register</button>
+        <button class="tab active" data-auth-tab="login" data-i18n="auth.signin">Sign in</button>
+        <button class="tab" data-auth-tab="register" data-i18n="auth.register">Register</button>
       </div>
       <form id="login-form" class="stack">
-        <label>Email<input name="email" type="email" required autocomplete="username" value="engineer@solarclear.local"></label>
-        <label>Password<input name="password" type="password" required autocomplete="current-password" value="Engineer@123"></label>
-        <button class="btn primary" type="submit">Sign in</button>
-        <p class="hint">Demo: engineer@solarclear.local / Engineer@123 &middot; admin@solarclear.local / Admin@123</p>
+        <label><span data-i18n="auth.email">Email</span><input name="email" type="email" required autocomplete="username" value="engineer@solarclear.local"></label>
+        <label><span data-i18n="auth.password">Password</span><input name="password" type="password" required autocomplete="current-password" value="Engineer@123"></label>
+        <button class="btn primary" type="submit" data-i18n="auth.signin">Sign in</button>
+        <p class="hint" data-i18n="auth.demo"></p>
       </form>
       <form id="register-form" class="stack" hidden>
-        <label>Full name<input name="name" required minlength="2"></label>
-        <label>Email<input name="email" type="email" required></label>
-        <label>Password<input name="password" type="password" required minlength="8" placeholder="8+ chars, letters and digits"></label>
-        <button class="btn primary" type="submit">Create account</button>
+        <label><span data-i18n="auth.name">Full name</span><input name="name" required minlength="2"></label>
+        <label><span data-i18n="auth.email">Email</span><input name="email" type="email" required></label>
+        <label><span data-i18n="auth.password">Password</span><input name="password" type="password" required minlength="8" data-i18n-placeholder="auth.pwHint"></label>
+        <button class="btn primary" type="submit" data-i18n="auth.create">Create account</button>
       </form>
       <p id="auth-error" class="error" role="alert"></p>
     </div>
@@ -42,17 +46,20 @@
     <aside class="sidebar">
       <div class="brand"><span class="logo-chip"><img class="logo" src="/static/img/d360ai-logo-cropped.png" alt="D360 AI Vision"></span><span class="product">SolarClear</span></div>
       <nav>
-        <a href="#dashboard" data-nav="dashboard">Dashboard</a>
-        <a href="#applications" data-nav="applications">Applications</a>
-        <a href="#alerts" data-nav="alerts">Alerts <span id="alert-count" class="pill" hidden></span></a>
-        <a href="#copilot" data-nav="copilot">D360 AI Copilot</a>
-        <a href="#assets" data-nav="assets">Network assets</a>
-        <a href="#runs" data-nav="runs">Agent log</a>
+        <a href="#dashboard" data-nav="dashboard" data-i18n="nav.dashboard">Dashboard</a>
+        <a href="#applications" data-nav="applications" data-i18n="nav.applications">Applications</a>
+        <a href="#alerts" data-nav="alerts"><span data-i18n="nav.alerts">Alerts</span> <span id="alert-count" class="pill" hidden></span></a>
+        <a href="#copilot" data-nav="copilot" data-i18n="nav.copilot">D360 AI Copilot</a>
+        <a href="#assets" data-nav="assets" data-i18n="nav.assets">Network assets</a>
+        <a href="#runs" data-nav="runs" data-i18n="nav.runs">Agent log</a>
       </nav>
       <div class="sidebar-foot">
+        <div class="lang-switch" role="group" aria-label="Language">
+          <button type="button" data-lang="en">English</button><button type="button" data-lang="te">తెలుగు</button>
+        </div>
         <div id="agent-mode" class="muted small"></div>
         <div id="user-label" class="small"></div>
-        <button id="logout" class="btn ghost small">Sign out</button>
+        <button id="logout" class="btn ghost small" data-i18n="nav.signout">Sign out</button>
       </div>
     </aside>
     <main id="main" class="main" tabindex="-1"></main>

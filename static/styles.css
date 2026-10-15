@@ -34,8 +34,17 @@
   --shadow: 0 8px 20px -10px rgba(0, 60, 50, 0.12), 0 30px 60px -30px rgba(0, 60, 50, 0.16);
   --shadow-glow: 0 14px 34px -14px rgba(22, 84, 169, 0.45);
   --font-display: "Space Grotesk", system-ui, sans-serif;
-  font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: "Inter", "Noto Sans Telugu", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
+/* Telugu script needs a Telugu face first and a little more line height */
+:root[lang="te"] { font-family: "Noto Sans Telugu", "Inter", system-ui, sans-serif; --font-display: "Noto Sans Telugu", "Space Grotesk", sans-serif; }
+:root[lang="te"] body { line-height: 1.65; }
+
+/* Language switch (segmented control) */
+.lang-switch { display: inline-flex; background: var(--surface-2); border-radius: 999px; padding: 3px; gap: 2px; align-self: flex-start; }
+.lang-switch button { font: inherit; font-size: 12px; border: 0; background: transparent; color: var(--text-2); padding: 4px 12px; border-radius: 999px; cursor: pointer; }
+.lang-switch button[aria-pressed="true"] { background: var(--surface); color: var(--brand); font-weight: 600; box-shadow: 0 1px 4px rgba(0, 60, 50, 0.15); }
+.auth-card .lang-switch { float: right; }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;

@@ -4,6 +4,8 @@ Base URL: `http://localhost:8000`. Interactive OpenAPI docs: `/docs`.
 
 **Authentication.** First call `POST /api/auth/login`. Then send `Authorization: Bearer <token>` on every other `/api` route.
 
+**Language.** Send `X-Lang: te` to get Telugu in the copilot answer, the scan summary and the shift brief. Without the header everything is English. Stored text comes back in both languages: `decision_reason` and `decision_reason_te` on applications, `message` and `message_te` on alerts, `reason` and `reason_te` on feasibility checks, and `detail` and `detail_te` on risk events.
+
 **Errors** come back as `{"detail": "..."}` with the HTTP status:
 
 | Status | Meaning |

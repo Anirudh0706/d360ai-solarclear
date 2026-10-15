@@ -7,6 +7,7 @@ from app.agent.copilot import chat
 from app.agent.gridwatch import run_scan
 from app.config import settings
 from app.database import fetch_all, get_db
+from app.i18n import get_lang
 from app.schemas import ChatIn, ScanIn
 from app.security import current_user
 
@@ -20,13 +21,15 @@ def agent_status(_: dict = Depends(current_user)):
 
 
 @router.post("/agent/chat")
-def agent_chat(body: ChatIn, conn: sqlite3.Connection = Depends(get_db), user: dict = Depends(current_user)):
-    return chat(conn, user["id"], body.message.strip(), [t.model_dump() for t in body.history])
+def agent_chat(body: ChatIn, conn: sqlite3.Connection = Depends(get_db), user: dict = Depends(current_user),
+               lang: str = Depends(get_lang)):
+    return chat(conn, user["id"], body.message.strip(), [t.model_dump() for t in body.history], lang)
 
 
 @router.post("/agent/scan")
-def agent_scan(body: ScanIn, conn: sqlite3.Connection = Depends(get_db), user: dict = Depends(current_user)):
-    return run_scan(conn, user["id"], body.with_brief)
+def agent_scan(body: ScanIn, conn: sqlite3.Connection = Depends(get_db), user: dict = Depends(current_user),
+               lang: str = Depends(get_lang)):
+    return run_scan(conn, user["id"], body.with_brief, lang)
 
 
 @router.get("/agent/runs")

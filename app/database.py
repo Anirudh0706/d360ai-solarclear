@@ -27,8 +27,17 @@ def get_db() -> Iterator[sqlite3.Connection]:
         conn.close()
 
 
+# Columns added after the first release; created on older databases at startup.
+MIGRATIONS = [("applications", "decision_reason_te", "TEXT"), ("alerts", "message_te", "TEXT")]
+
+
 def init_db(conn: sqlite3.Connection) -> None:
     conn.executescript(SCHEMA_FILE.read_text(encoding="utf-8"))
+    for table, column, sql_type in MIGRATIONS:
+        existing = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+        if column not in existing:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {sql_type}")
+    conn.commit()
 
 
 def fetch_all(conn: sqlite3.Connection, sql: str, params: tuple = ()) -> list[dict]:
