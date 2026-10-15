@@ -16,7 +16,7 @@ def _fn(name: str, description: str, properties: dict | None = None, required: l
     }}
 
 
-DTR = {"type": "string", "description": "DTR code, e.g. DTR-N1-03"}
+DTR = {"type": "string", "description": "DTR code (e.g. DTR-N1-03) or its locality name (e.g. Pet Basheerabad)"}
 FEEDER = {"type": "string", "description": "Feeder code, e.g. FDR-S1"}
 
 TOOL_SPECS = [
@@ -37,7 +37,10 @@ TOOL_SPECS = [
 
 
 def _dtr_id(conn: sqlite3.Connection, code: str) -> int | None:
-    row = fetch_one(conn, "SELECT id FROM dtrs WHERE UPPER(code) = UPPER(?)", ((code or "").strip(),))
+    """Accept a DTR code or a locality name in English or Telugu."""
+    key = (code or "").strip()
+    row = fetch_one(conn, "SELECT id FROM dtrs WHERE UPPER(code) = UPPER(?) OR LOWER(name) = LOWER(?) OR name_te = ? "
+                          "ORDER BY UPPER(code) = UPPER(?) DESC LIMIT 1", (key, key, key, key))
     return row["id"] if row else None
 
 
@@ -49,7 +52,7 @@ def _feeder_id(conn: sqlite3.Connection, code: str | None) -> int | None:
 
 
 def _compact_dtr(d: dict) -> dict:
-    keys = ("dtr_code", "feeder_code", "rating_kva", "existing_pv_kw", "hosting_kw", "utilisation_pct",
+    keys = ("dtr_code", "dtr_name", "dtr_name_te", "feeder_code", "rating_kva", "existing_pv_kw", "hosting_kw", "utilisation_pct",
             "binding_constraint", "status", "pending_kw", "months_to_saturation")
     return {k: d[k] for k in keys}
 

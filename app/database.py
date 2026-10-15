@@ -28,7 +28,8 @@ def get_db() -> Iterator[sqlite3.Connection]:
 
 
 # Columns added after the first release; created on older databases at startup.
-MIGRATIONS = [("applications", "decision_reason_te", "TEXT"), ("alerts", "message_te", "TEXT")]
+MIGRATIONS = [("applications", "decision_reason_te", "TEXT"), ("alerts", "message_te", "TEXT"),
+              ("substations", "name_te", "TEXT"), ("feeders", "name_te", "TEXT"), ("dtrs", "name_te", "TEXT")]
 
 
 def init_db(conn: sqlite3.Connection) -> None:

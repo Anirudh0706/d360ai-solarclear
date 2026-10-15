@@ -23,25 +23,34 @@ from app.security import hash_password  # noqa: E402
 
 TS_FMT = "%Y-%m-%dT%H:00"
 
-SUBSTATIONS = [
-    ("SS-NORTH", "North 33/11 kV Substation", 17.45, 78.38),
-    ("SS-SOUTH", "South 33/11 kV Substation", 17.24, 78.43),
+# Real Telangana places (TGSPDCL area around Hyderabad); the network data itself is synthetic.
+SUBSTATIONS = [  # code, name, Telugu name, latitude, longitude
+    ("SS-KOMPALLY", "33/11 kV Kompally Substation (Medchal-Malkajgiri)", "33/11 kV కొంపల్లి సబ్‌స్టేషన్ (మేడ్చల్-మల్కాజ్‌గిరి)", 17.536, 78.486),
+    ("SS-SHADNAGAR", "33/11 kV Shadnagar Substation (Ranga Reddy)", "33/11 kV షాద్‌నగర్ సబ్‌స్టేషన్ (రంగారెడ్డి)", 17.071, 78.205),
 ]
-FEEDERS = [  # code, name, substation, rating kVA
-    ("FDR-N1", "N1 Residential Feeder", "SS-NORTH", 4000),
-    ("FDR-N2", "N2 Commercial Feeder", "SS-NORTH", 4000),
-    ("FDR-S1", "S1 Rural Mixed Feeder", "SS-SOUTH", 3000),
-    ("FDR-S2", "S2 Agricultural (KUSUM) Feeder", "SS-SOUTH", 3000),
+FEEDERS = [  # code, name, Telugu name, substation, rating kVA
+    ("FDR-N1", "11 kV Kompally Residential Feeder", "11 kV కొంపల్లి నివాస ఫీడర్", "SS-KOMPALLY", 4000),
+    ("FDR-N2", "11 kV Suchitra-Jeedimetla Commercial Feeder", "11 kV సుచిత్ర-జీడిమెట్ల వాణిజ్య ఫీడర్", "SS-KOMPALLY", 4000),
+    ("FDR-S1", "11 kV Shadnagar Rural Feeder", "11 kV షాద్‌నగర్ గ్రామీణ ఫీడర్", "SS-SHADNAGAR", 3000),
+    ("FDR-S2", "11 kV Kothur Agricultural (PM-KUSUM) Feeder", "11 kV కొత్తూరు వ్యవసాయ (పీఎం-కుసుమ్) ఫీడర్", "SS-SHADNAGAR", 3000),
 ]
-DTRS = [  # code, feeder, kVA, area, PV penetration (share of kVA)
-    ("DTR-N1-01", "FDR-N1", 100, "urban", 0.15), ("DTR-N1-02", "FDR-N1", 160, "urban", 0.55),
-    ("DTR-N1-03", "FDR-N1", 100, "urban", 0.92), ("DTR-N1-04", "FDR-N1", 250, "urban", 0.30),
-    ("DTR-N2-01", "FDR-N2", 250, "urban", 0.35), ("DTR-N2-02", "FDR-N2", 160, "urban", 0.70),
-    ("DTR-N2-03", "FDR-N2", 100, "urban", 0.08), ("DTR-N2-04", "FDR-N2", 63, "urban", 0.60),
-    ("DTR-S1-01", "FDR-S1", 100, "rural", 0.45), ("DTR-S1-02", "FDR-S1", 63, "rural", 1.25),  # legacy over-sanctioned DTR
-    ("DTR-S1-03", "FDR-S1", 100, "rural", 0.20), ("DTR-S1-04", "FDR-S1", 160, "rural", 0.80),
-    ("DTR-S2-01", "FDR-S2", 250, "agri", 0.40), ("DTR-S2-02", "FDR-S2", 160, "agri", 0.75),
-    ("DTR-S2-03", "FDR-S2", 100, "agri", 0.10), ("DTR-S2-04", "FDR-S2", 250, "agri", 0.55),
+DTRS = [  # code, feeder, kVA, area, PV penetration (share of kVA), locality, Telugu locality
+    ("DTR-N1-01", "FDR-N1", 100, "urban", 0.15, "Kompally Main Road", "కొంపల్లి మెయిన్ రోడ్"),
+    ("DTR-N1-02", "FDR-N1", 160, "urban", 0.55, "Dulapally", "దూలపల్లి"),
+    ("DTR-N1-03", "FDR-N1", 100, "urban", 0.92, "Pet Basheerabad", "పేట్ బషీరాబాద్"),
+    ("DTR-N1-04", "FDR-N1", 250, "urban", 0.30, "Gundlapochampally", "గుండ్లపోచంపల్లి"),
+    ("DTR-N2-01", "FDR-N2", 250, "urban", 0.35, "Suchitra Circle", "సుచిత్ర సర్కిల్"),
+    ("DTR-N2-02", "FDR-N2", 160, "urban", 0.70, "Jeedimetla", "జీడిమెట్ల"),
+    ("DTR-N2-03", "FDR-N2", 100, "urban", 0.08, "Shapur Nagar", "షాపూర్ నగర్"),
+    ("DTR-N2-04", "FDR-N2", 63, "urban", 0.60, "Chintal", "చింతల్"),
+    ("DTR-S1-01", "FDR-S1", 100, "rural", 0.45, "Shadnagar Town", "షాద్‌నగర్ టౌన్"),
+    ("DTR-S1-02", "FDR-S1", 63, "rural", 1.25, "Farooqnagar", "ఫరూఖ్‌నగర్"),  # legacy over-sanctioned DTR
+    ("DTR-S1-03", "FDR-S1", 100, "rural", 0.20, "Kondurg", "కొందుర్గ్"),
+    ("DTR-S1-04", "FDR-S1", 160, "rural", 0.80, "Chowdergudem", "చౌదరిగూడెం"),
+    ("DTR-S2-01", "FDR-S2", 250, "agri", 0.40, "Kothur", "కొత్తూరు"),
+    ("DTR-S2-02", "FDR-S2", 160, "agri", 0.75, "Nandigama", "నందిగామ"),
+    ("DTR-S2-03", "FDR-S2", 100, "agri", 0.10, "Keshampet", "కేశంపేట"),
+    ("DTR-S2-04", "FDR-S2", 250, "agri", 0.55, "Talakondapalle", "తలకొండపల్లి"),
 ]
 # Load shape (share of base load) per hour 0..23, by area type.
 LOAD_SHAPE = {
@@ -51,7 +60,9 @@ LOAD_SHAPE = {
 }
 LOAD_FACTOR = {"urban": 0.45, "rural": 0.35, "agri": 0.40}
 VOLTAGE_SENSITIVITY = {"urban": 0.07, "rural": 0.11, "agri": 0.09}  # pu per (kW/kVA)
-NAMES = ["Rao", "Reddy", "Sharma", "Naidu", "Kumar", "Devi", "Goud", "Prasad", "Khan", "Varma", "Patel", "Iyer"]
+FIRST_NAMES = ["Ramesh", "Lakshmi", "Srinivas", "Padma", "Venkatesh", "Sravani", "Mahesh", "Anitha", "Narsimha",
+               "Swapna", "Rajaiah", "Bhavani", "Kiran", "Saritha", "Yadagiri", "Mallesh", "Shabana", "Imran"]
+SURNAMES = ["Reddy", "Goud", "Rao", "Yadav", "Naidu", "Chary", "Mudiraj", "Rathod", "Varma", "Sharma", "Khan", "Begum"]
 
 
 def seed(conn: sqlite3.Connection, days: int = 14, rng_seed: int = 42) -> None:
@@ -64,15 +75,16 @@ def seed(conn: sqlite3.Connection, days: int = 14, rng_seed: int = 42) -> None:
          ("Planning Engineer", "engineer@solarclear.local", hash_password("Engineer@123"), "engineer")],
     )
     sub_ids = {}
-    for code, name, lat, lon in SUBSTATIONS:
+    for code, name, name_te, lat, lon in SUBSTATIONS:
         sub_ids[code] = conn.execute(
-            "INSERT INTO substations (code, name, latitude, longitude) VALUES (?, ?, ?, ?)", (code, name, lat, lon)
+            "INSERT INTO substations (code, name, name_te, latitude, longitude) VALUES (?, ?, ?, ?, ?)",
+            (code, name, name_te, lat, lon),
         ).lastrowid
     feeder_ids, feeder_sub = {}, {}
-    for code, name, sub, rating in FEEDERS:
+    for code, name, name_te, sub, rating in FEEDERS:
         feeder_ids[code] = conn.execute(
-            "INSERT INTO feeders (substation_id, code, name, rating_kva) VALUES (?, ?, ?, ?)",
-            (sub_ids[sub], code, name, rating),
+            "INSERT INTO feeders (substation_id, code, name, name_te, rating_kva) VALUES (?, ?, ?, ?, ?)",
+            (sub_ids[sub], code, name, name_te, rating),
         ).lastrowid
         feeder_sub[code] = sub
 
@@ -80,7 +92,7 @@ def seed(conn: sqlite3.Connection, days: int = 14, rng_seed: int = 42) -> None:
     now = datetime.now().replace(minute=0, second=0, microsecond=0)
     start = now - timedelta(days=days)
     weather = {}
-    for code, _, lat, lon in SUBSTATIONS:
+    for code, _, _, lat, lon in SUBSTATIONS:
         day_k = {}
         for i in range(days * 24):
             ts = start + timedelta(hours=i)
@@ -95,10 +107,10 @@ def seed(conn: sqlite3.Connection, days: int = 14, rng_seed: int = 42) -> None:
         )
 
     account = 100000
-    for code, feeder, kva, area, penetration in DTRS:
+    for code, feeder, kva, area, penetration, locality, locality_te in DTRS:
         dtr_id = conn.execute(
-            "INSERT INTO dtrs (feeder_id, code, name, rating_kva, area_type) VALUES (?, ?, ?, ?, ?)",
-            (feeder_ids[feeder], code, f"{code.split('-', 1)[1]} {area.title()} DTR", kva, area),
+            "INSERT INTO dtrs (feeder_id, code, name, name_te, rating_kva, area_type) VALUES (?, ?, ?, ?, ?, ?)",
+            (feeder_ids[feeder], code, locality, locality_te, kva, area),
         ).lastrowid
 
         # Consumers, with PV installed on a random subset until the target penetration is reached.
@@ -108,7 +120,7 @@ def seed(conn: sqlite3.Connection, days: int = 14, rng_seed: int = 42) -> None:
         for i in range(n_consumers):
             account += 1
             cat = "commercial" if area == "urban" and i % 7 == 0 else category
-            consumers.append([dtr_id, f"AC{account}", f"{rng.choice(NAMES)} {chr(65 + i % 26)}.", cat,
+            consumers.append([dtr_id, f"AC{account}", f"{rng.choice(FIRST_NAMES)} {rng.choice(SURNAMES)}", cat,
                               round(rng.uniform(2, 15 if cat != "domestic" else 6), 1), 0.0, "none", None])
         target, installed = penetration * kva, 0.0
         for c in rng.sample(consumers, len(consumers)):
@@ -145,11 +157,15 @@ def seed(conn: sqlite3.Connection, days: int = 14, rng_seed: int = 42) -> None:
         )
 
     # Pending net-meter / KUSUM applications awaiting clearance.
-    apps = [("DTR-N1-01", "S. Rao", "rooftop", 5), ("DTR-N1-03", "K. Reddy", "rooftop", 4),
-            ("DTR-N1-02", "Sunrise Apartments", "rooftop", 25), ("DTR-N2-03", "City Mall", "rooftop", 40),
-            ("DTR-S1-02", "P. Goud", "rooftop", 3), ("DTR-S1-04", "M. Devi", "rooftop", 6),
-            ("DTR-S2-02", "Farmer Group A", "kusum", 15), ("DTR-S2-03", "R. Naidu (pump)", "kusum", 7.5),
-            ("DTR-N2-02", "A. Sharma", "rooftop", 10)]
+    apps = [("DTR-N1-01", "Srinivas Rao, Kompally", "rooftop", 5),
+            ("DTR-N1-03", "Lakshmi Reddy, Pet Basheerabad", "rooftop", 4),
+            ("DTR-N1-02", "Sri Sai Residency (Apartments), Dulapally", "rooftop", 25),
+            ("DTR-N2-03", "Shapur Nagar Commercial Complex", "rooftop", 40),
+            ("DTR-S1-02", "Narsimha Goud, Farooqnagar", "rooftop", 3),
+            ("DTR-S1-04", "Padma Yadav, Chowdergudem", "rooftop", 6),
+            ("DTR-S2-02", "Nandigama Rythu Sangham (FPO)", "kusum", 15),
+            ("DTR-S2-03", "Yadagiri Mudiraj (agri pump), Keshampet", "kusum", 7.5),
+            ("DTR-N2-02", "Mahesh Chary, Jeedimetla", "rooftop", 10)]
     for code, applicant, scheme, kw in apps:
         dtr_id = conn.execute("SELECT id FROM dtrs WHERE code = ?", (code,)).fetchone()[0]
         conn.execute(

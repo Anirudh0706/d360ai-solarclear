@@ -47,8 +47,9 @@ def dtr_context(conn: sqlite3.Connection, dtr_id: int) -> dict | None:
     return fetch_one(
         conn,
         """
-        SELECT d.id, d.code, d.name, d.rating_kva, d.area_type, d.feeder_id,
-               f.code AS feeder_code, f.rating_kva AS feeder_rating_kva, f.substation_id,
+        SELECT d.id, d.code, d.name, d.name_te, d.rating_kva, d.area_type, d.feeder_id,
+               f.code AS feeder_code, f.name AS feeder_name, f.name_te AS feeder_name_te,
+               f.rating_kva AS feeder_rating_kva, f.substation_id,
                s.latitude, s.longitude,
                COALESCE((SELECT SUM(pv_kw) FROM consumers c WHERE c.dtr_id = d.id), 0) AS pv_kw,
                COALESCE((SELECT SUM(pv_kw) FROM consumers c WHERE c.dtr_id = d.id AND c.scheme = 'kusum'), 0) AS kusum_kw,
@@ -60,6 +61,11 @@ def dtr_context(conn: sqlite3.Connection, dtr_id: int) -> dict | None:
         """,
         (dtr_id,),
     )
+
+
+def place(d: dict) -> dict[str, str]:
+    """DTR code with its locality, per language, e.g. DTR-S1-02 (Farooqnagar) / DTR-S1-02 (ఫరూఖ్‌నగర్)."""
+    return {"en": f"{d['dtr_code']} ({d['dtr_name']})", "te": f"{d['dtr_code']} ({d.get('dtr_name_te') or d['dtr_name']})"}
 
 
 def build_model(conn: sqlite3.Connection, dtr_id: int) -> DtrModel | None:
@@ -160,8 +166,11 @@ def hosting_capacity(conn: sqlite3.Connection, dtr_id: int, model: DtrModel | No
         "dtr_id": m.ctx["id"],
         "dtr_code": m.ctx["code"],
         "dtr_name": m.ctx["name"],
+        "dtr_name_te": m.ctx["name_te"] or m.ctx["name"],
         "feeder_id": m.ctx["feeder_id"],
         "feeder_code": m.ctx["feeder_code"],
+        "feeder_name": m.ctx["feeder_name"],
+        "feeder_name_te": m.ctx["feeder_name_te"] or m.ctx["feeder_name"],
         "area_type": m.ctx["area_type"],
         "rating_kva": rating,
         "consumers": m.ctx["consumers"],
@@ -204,8 +213,10 @@ def network_hosting(conn: sqlite3.Connection, feeder_id: int | None = None) -> d
         dtrs.append(hosting_capacity(conn, dtr_id, models[dtr_id]))
 
     feeders = []
-    feeder_sql = "SELECT id, code, name, rating_kva FROM feeders" + (" WHERE id = ?" if feeder_id else "")
-    for f in fetch_all(conn, feeder_sql + " ORDER BY code", (feeder_id,) if feeder_id else ()):
+    feeder_sql = ("SELECT f.id, f.code, f.name, f.name_te, f.rating_kva, s.name AS substation_name, "
+                  "s.name_te AS substation_name_te FROM feeders f JOIN substations s ON s.id = f.substation_id"
+                  + (" WHERE f.id = ?" if feeder_id else ""))
+    for f in fetch_all(conn, feeder_sql + " ORDER BY f.code", (feeder_id,) if feeder_id else ()):
         members = [d for d in dtrs if d["feeder_id"] == f["id"]]
         pv = sum(d["existing_pv_kw"] for d in members)
         dtr_sum = sum(d["hosting_kw"] for d in members)
@@ -215,6 +226,8 @@ def network_hosting(conn: sqlite3.Connection, feeder_id: int | None = None) -> d
         hosting = max(0.0, min(dtr_sum, feeder_rev))
         feeders.append({
             "feeder_id": f["id"], "feeder_code": f["code"], "feeder_name": f["name"],
+            "feeder_name_te": f["name_te"] or f["name"], "substation_name": f["substation_name"],
+            "substation_name_te": f["substation_name_te"] or f["substation_name"],
             "rating_kva": f["rating_kva"], "dtrs": len(members),
             "existing_pv_kw": round(pv, 1), "hosting_kw": round(hosting, 1),
             "binding_constraint": "feeder_reverse_flow" if feeder_rev < dtr_sum else "sum_of_dtrs",
@@ -276,7 +289,8 @@ def detect_risks(conn: sqlite3.Connection, feeder_id: int | None = None, hours: 
     events = []
     for row in fetch_all(conn, sql, (feeder_id,) if feeder_id else ()):
         fc = forecast_dtr(conn, row["id"], hours)
-        rating = dtr_context(conn, row["id"])["rating_kva"]
+        ctx = dtr_context(conn, row["id"])
+        rating = ctx["rating_kva"]
         for risk in ("overvoltage", "reverse_flow"):
             hits = [p for p in fc["points"] if risk in p["risks"]]
             if not hits:
@@ -290,7 +304,8 @@ def detect_risks(conn: sqlite3.Connection, feeder_id: int | None = None, hours: 
                 severe = peak >= rating
                 detail, detail_te = both("risk.reverse_flow", peak=peak, pct=peak / rating * 100, kva=rating)
             events.append({
-                "dtr_id": row["id"], "dtr_code": fc["dtr_code"], "risk": risk,
+                "dtr_id": row["id"], "dtr_code": fc["dtr_code"], "dtr_name": ctx["name"],
+                "dtr_name_te": ctx["name_te"] or ctx["name"], "risk": risk,
                 "severity": "critical" if severe else "warning",
                 "first_at": hits[0]["ts"], "hours": len(hits), "peak": round(peak, 3),
                 "detail": detail, "detail_te": detail_te,
@@ -327,7 +342,7 @@ def evaluate_request(
     # Reason text in English and Telugu (both are stored with the application).
     reasons = {}
     for lang in ("en", "te"):
-        basis = tr("clear.basis", lang, dtr=hc["dtr_code"], kva=f"{hc['rating_kva']:.0f}", pv=hc["existing_pv_kw"],
+        basis = tr("clear.basis", lang, dtr=place(hc), kva=f"{hc['rating_kva']:.0f}", pv=hc["existing_pv_kw"],
                    hc=hc["hosting_kw"], label=word(f"limit.{constraint}"), queued=f"{queued:.1f}")
         reasons[lang] = tr(f"clear.{rec}", lang, kw=requested_kw, rec=rec_kw, headroom=f"{headroom:.1f}", basis=basis)
     reason = reasons["en"]

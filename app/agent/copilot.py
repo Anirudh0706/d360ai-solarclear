@@ -12,6 +12,7 @@ import sqlite3
 
 from app.agent.llm import complete, get_client, usage_of
 from app.agent.tools import TOOL_SPECS, run_tool, tool_result_text
+from app.analytics.grid import place
 from app.i18n import normalise, tr, word
 
 MAX_ROUNDS = 4
@@ -22,7 +23,8 @@ SYSTEM_PROMPT = (
     "You are D360 AI SolarClear, a planning assistant for an Indian power distribution utility. You answer questions on "
     "rooftop / PM-KUSUM solar hosting capacity, solar and net-export forecasts, voltage and reverse-flow risk, "
     "saturated DTRs and net-meter feasibility. Take every number from tools; never estimate. Reply in at most "
-    "150 words, using short bullets, DTR/feeder codes and units (kW, kVA, pu). You recommend; engineers approve. "
+    "150 words, using short bullets, DTR/feeder codes with their Telangana locality (e.g. DTR-S1-02 (Farooqnagar)) "
+    "and units (kW, kVA, pu). You recommend; engineers approve. "
     "If asked what you are, you are the D360 AI engine; do not name any underlying model or vendor."
 )
 TELUGU_INSTRUCTION = (
@@ -121,11 +123,20 @@ def _has(text: str, intent: str) -> bool:
     return any(w in text for w in KEYWORDS[intent])
 
 
+def _dtr_by_place(conn: sqlite3.Connection, message: str) -> str | None:
+    """Find a DTR by locality name (English or Telugu) mentioned in the question, longest name first."""
+    text = message.lower()
+    for row in conn.execute("SELECT code, name, name_te FROM dtrs ORDER BY LENGTH(name) DESC"):
+        if row["name"].lower() in text or (row["name_te"] and row["name_te"] in message):
+            return row["code"]
+    return None
+
+
 def offline_answer(conn: sqlite3.Connection, message: str, lang: str = "en") -> dict:
     """Keyword intent router over the same tools. Zero tokens, always available."""
     text = message.lower()
     dtr_m, feeder_m, kw_m = DTR_RE.search(message), FEEDER_RE.search(message), KW_RE.search(message)
-    dtr_code = f"DTR-{dtr_m.group(1).upper()}-{int(dtr_m.group(2)):02d}" if dtr_m else None
+    dtr_code = f"DTR-{dtr_m.group(1).upper()}-{int(dtr_m.group(2)):02d}" if dtr_m else _dtr_by_place(conn, message)
     feeder_code = f"FDR-{feeder_m.group(1).upper()}" if feeder_m else None
     scheme = "kusum" if _has(text, "kusum") else "rooftop"
 
@@ -164,7 +175,7 @@ def _format(tool: str, r: dict, lang: str) -> str:
         lim = r["limits_kw"]
         months = (tr("bot.months", lang, n=r["months_to_saturation"]) if r["months_to_saturation"] is not None
                   else tr("bot.na", lang))
-        return tr("bot.hosting", lang, dtr=r["dtr_code"], kva=f"{r['rating_kva']:.0f}", feeder=r["feeder_code"],
+        return tr("bot.hosting", lang, dtr=place(r), kva=f"{r['rating_kva']:.0f}", feeder=r["feeder_code"],
                   status=word(f"status.{r['status']}"), pv=r["existing_pv_kw"], util=r["utilisation_pct"],
                   hc=r["hosting_kw"], label=word(f"limit.{r['binding_constraint']}"), rf=lim["reverse_flow"],
                   v=lim["voltage"], pc=lim["policy_cap"], pending=r["pending_kw"], months=months)
@@ -179,14 +190,14 @@ def _format(tool: str, r: dict, lang: str) -> str:
         if not r["events"]:
             return tr("bot.no_risks", lang)
         return tr("bot.risks", lang, n=r["count"]) + "".join(
-            tr("bot.risk_line", lang, sev=word(f"status.{e['severity']}"), dtr=e["dtr_code"],
+            tr("bot.risk_line", lang, sev=word(f"status.{e['severity']}"), dtr=place(e),
                risk=word(f"riskname.{e['risk']}"), detail=e["detail_te"] if te else e["detail"],
                hours=e["hours"], first=e["first_at"]) for e in r["events"])
     if tool == "list_dtrs":
         if not r["dtrs"]:
             return tr("bot.no_dtrs", lang)
         return tr("bot.dtrs", lang, n=r["count"]) + "".join(
-            tr("bot.dtr_line", lang, dtr=d["dtr_code"], util=d["utilisation_pct"], hc=d["hosting_kw"],
+            tr("bot.dtr_line", lang, dtr=place(d), util=d["utilisation_pct"], hc=d["hosting_kw"],
                status=word(f"status.{d['status']}")) for d in r["dtrs"])
     if tool == "list_applications":
         return tr("bot.apps", lang) + "".join(
@@ -195,5 +206,5 @@ def _format(tool: str, r: dict, lang: str) -> str:
             + (f" -> {tr('rec.' + a['recommendation'], lang)} {a['recommended_kw']} kW" if a["recommendation"] else "")
             for a in r["applications"])
     return tr("bot.overview", lang) + "".join(
-        tr("bot.feeder_line", lang, f=f["feeder_code"], pv=f["existing_pv_kw"], hc=f["hosting_kw"],
+        tr("bot.feeder_line", lang, f=f"{f['feeder_code']} ({f['feeder_name_te'] if te else f['feeder_name']})", pv=f["existing_pv_kw"], hc=f["hosting_kw"],
            sat=f["saturated_dtrs"], watch=f["watch_dtrs"]) for f in r["feeders"])

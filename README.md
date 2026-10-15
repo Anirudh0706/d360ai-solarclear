@@ -1,4 +1,4 @@
-# SolarClear: Agentic Solar Hosting-Capacity & Net-Meter Clearance
+﻿# SolarClear: Agentic Solar Hosting-Capacity & Net-Meter Clearance
 
 SolarClear helps a power distribution utility (DISCOM) decide where rooftop and PM-KUSUM solar can connect. It covers four tasks:
 
@@ -25,7 +25,7 @@ Net-meter feasibility is usually a manual engineering judgement. SolarClear turn
 | Alerts | Overvoltage, reverse-flow, saturation and pipeline alerts, each with a severity. Alerts can be acknowledged. |
 | Network assets (CRUD) | Admins add, upgrade (change kVA) and delete feeders and DTRs. Upgrading a DTR raises its hosting capacity straight away. |
 | Agent log | Audit trail of every agent run: tools used and tokens spent. |
-| English and Telugu (తెలుగు) | A one-click language switch on the login screen and in the sidebar. See the "Languages" section below. |
+| English and Telugu (à°¤à±†à°²à±à°—à±) | A one-click language switch on the login screen and in the sidebar. See the "Languages" section below. |
 | Offline mode | Without Azure keys, a rule-based router answers through the same tools. Without internet access, a clear-sky weather model replaces Open-Meteo. |
 
 ## Technology stack
@@ -38,42 +38,42 @@ Net-meter feasibility is usually a manual engineering judgement. SolarClear turn
 | AI agent | Azure OpenAI chat completions with tool calling (`openai` SDK) | Uses the team's existing Azure deployment. |
 | External API | [Open-Meteo](https://open-meteo.com) hourly irradiance and temperature forecast | Free and needs no key. A clear-sky model is used as fallback. |
 | Frontend | One HTML page with vanilla JS and CSS, charts drawn in hand-written SVG | No build step and no CDN. Supports light and dark themes and works on mobile. |
-| Tests | pytest with FastAPI TestClient | 64 tests that run offline in about 6 seconds. |
+| Tests | pytest with FastAPI TestClient | 67 tests that run offline in about 6 seconds. |
 
 ## Project structure
 
 ```
 solarclear/
-├── app/
-│   ├── main.py              # FastAPI app, startup (schema + seed), static UI
-│   ├── config.py            # env / .env settings, grid planning limits
-│   ├── database.py          # sqlite connection + helpers
-│   ├── security.py          # password hashing, tokens, auth dependencies
-│   ├── schemas.py           # request validation (pydantic)
-│   ├── analytics/
-│   │   ├── solar.py         # sun position, clear-sky GHI, PV output, regression
-│   │   └── grid.py          # forecasting, hosting capacity, risks, feasibility
-│   ├── agent/
-│   │   ├── llm.py           # Azure OpenAI client (token-capped)
-│   │   ├── tools.py         # 7 read-only tools exposed to the agent
-│   │   ├── copilot.py       # tool-calling chat loop + offline router
-│   │   └── gridwatch.py     # autonomous scan agent
-│   ├── services/
-│   │   ├── weather.py       # Open-Meteo client + clear-sky fallback + cache
-│   │   ├── clearance.py     # evaluate / approve applications
-│   │   └── notify.py        # webhook notifications
-│   └── routers/             # auth, assets, analytics, applications, agent
-├── db/
-│   ├── schema.sql           # tables, keys, constraints, indexes
-│   ├── seed.py              # synthetic but physically consistent sample data
-│   └── queries.sql          # important queries used by the app
-├── static/                  # index.html, app.js, styles.css
-├── tests/                   # pytest suite
-├── docs/
-│   ├── API.md               # endpoint reference
-│   └── TESTING.md           # test cases, results, bugs
-├── .env.example
-└── requirements.txt
+â”œâ”€â”€ app/
+â”‚   â”œâ”€â”€ main.py              # FastAPI app, startup (schema + seed), static UI
+â”‚   â”œâ”€â”€ config.py            # env / .env settings, grid planning limits
+â”‚   â”œâ”€â”€ database.py          # sqlite connection + helpers
+â”‚   â”œâ”€â”€ security.py          # password hashing, tokens, auth dependencies
+â”‚   â”œâ”€â”€ schemas.py           # request validation (pydantic)
+â”‚   â”œâ”€â”€ analytics/
+â”‚   â”‚   â”œâ”€â”€ solar.py         # sun position, clear-sky GHI, PV output, regression
+â”‚   â”‚   â””â”€â”€ grid.py          # forecasting, hosting capacity, risks, feasibility
+â”‚   â”œâ”€â”€ agent/
+â”‚   â”‚   â”œâ”€â”€ llm.py           # Azure OpenAI client (token-capped)
+â”‚   â”‚   â”œâ”€â”€ tools.py         # 7 read-only tools exposed to the agent
+â”‚   â”‚   â”œâ”€â”€ copilot.py       # tool-calling chat loop + offline router
+â”‚   â”‚   â””â”€â”€ gridwatch.py     # autonomous scan agent
+â”‚   â”œâ”€â”€ services/
+â”‚   â”‚   â”œâ”€â”€ weather.py       # Open-Meteo client + clear-sky fallback + cache
+â”‚   â”‚   â”œâ”€â”€ clearance.py     # evaluate / approve applications
+â”‚   â”‚   â””â”€â”€ notify.py        # webhook notifications
+â”‚   â””â”€â”€ routers/             # auth, assets, analytics, applications, agent
+â”œâ”€â”€ db/
+â”‚   â”œâ”€â”€ schema.sql           # tables, keys, constraints, indexes
+â”‚   â”œâ”€â”€ seed.py              # synthetic but physically consistent sample data
+â”‚   â””â”€â”€ queries.sql          # important queries used by the app
+â”œâ”€â”€ static/                  # index.html, app.js, styles.css
+â”œâ”€â”€ tests/                   # pytest suite
+â”œâ”€â”€ docs/
+â”‚   â”œâ”€â”€ API.md               # endpoint reference
+â”‚   â””â”€â”€ TESTING.md           # test cases, results, bugs
+â”œâ”€â”€ .env.example
+â””â”€â”€ requirements.txt
 ```
 
 ## Installation
@@ -121,7 +121,17 @@ python -m db.seed --reset
 
 The sample data contains:
 
-* 2 substations, 4 feeders (residential, commercial, rural, and a KUSUM agricultural feeder) and 16 DTRs of 63 to 250 kVA.
+* The network is set in real **Telangana** localities around Hyderabad. Names are given in both English and Telugu. The electrical data is synthetic.
+
+  | Substation | Feeder | DTR localities |
+  |---|---|---|
+  | 33/11 kV Kompally (Medchal-Malkajgiri) | FDR-N1 Kompally Residential | Kompally Main Road, Dulapally, Pet Basheerabad, Gundlapochampally |
+  | | FDR-N2 Suchitra-Jeedimetla Commercial | Suchitra Circle, Jeedimetla, Shapur Nagar, Chintal |
+  | 33/11 kV Shadnagar (Ranga Reddy) | FDR-S1 Shadnagar Rural | Shadnagar Town, Farooqnagar, Kondurg, Chowdergudem |
+  | | FDR-S2 Kothur Agricultural (PM-KUSUM) | Kothur, Nandigama, Keshampet, Talakondapalle |
+
+  Substation coordinates are real, so the live Open-Meteo forecast is for those places. You can name a DTR by locality anywhere a code is accepted, for example "hosting capacity at Pet Basheerabad" or "à°«à°°à±‚à°–à±â€Œà°¨à°—à°°à± à°²à±‹ 3 kW à°•à°²à°ªà°µà°šà±à°šà°¾?" ("Can 3 kW be added at Farooqnagar?").
+* 16 DTRs of 63 to 250 kVA.
 * About 600 consumers. Rooftop or KUSUM PV is installed at penetrations from 8% to 125% of DTR kVA, and commissioning dates are spread over 3 years.
 * 14 days of hourly weather and DTR meter readings (load, solar, net flow and voltage), about 5,400 rows. The data is generated from the same physics the analytics use, plus noise.
 * 9 pending applications and two users:
@@ -134,10 +144,10 @@ The sample data contains:
 **Tables:** `users`, `substations`, `feeders`, `dtrs`, `consumers`, `readings`, `weather`, `applications`, `alerts`, `agent_runs`.
 
 ```
-substations 1─* feeders 1─* dtrs 1─* consumers
-                             dtrs 1─* readings
-substations 1─* weather       dtrs 1─* applications *─1 consumers
-                             dtrs 1─* alerts           users 1─* applications / agent_runs
+substations 1â”€* feeders 1â”€* dtrs 1â”€* consumers
+                             dtrs 1â”€* readings
+substations 1â”€* weather       dtrs 1â”€* applications *â”€1 consumers
+                             dtrs 1â”€* alerts           users 1â”€* applications / agent_runs
 ```
 
 Every table has an `INTEGER PRIMARY KEY`. Foreign keys use `ON DELETE CASCADE` for child data and `SET NULL` for audit references. `CHECK` constraints enforce enums and positive ratings. `UNIQUE` constraints cover asset codes, accounts, `(dtr_id, ts)` and `(substation_id, ts, kind)`. The important queries are in [db/queries.sql](db/queries.sql).
@@ -170,14 +180,14 @@ python -m uvicorn app.main:app --reload --port 8000
 
 ## Languages: English and Telugu
 
-The whole application works in **English** and **Telugu (తెలుగు)**. Switch with the `English | తెలుగు` control on the login card or in the sidebar. The choice is remembered for next time.
+The whole application works in **English** and **Telugu (à°¤à±†à°²à±à°—à±)**. Switch with the `English | à°¤à±†à°²à±à°—à±` control on the login card or in the sidebar. The choice is remembered for next time.
 
 | Part | How it is translated |
 |---|---|
 | UI text (menus, tables, charts, forms, prompts, errors) | `static/locales/en.json` and `static/locales/te.json`. The page applies them at runtime. |
 | Text the server generates (clearance reasons, alerts, scan summary) | Templates in `app/i18n.py`. Reasons and alerts are stored in both languages (`decision_reason_te`, `message_te`), so switching language is instant. |
 | D360 AI Copilot and shift brief | The client sends `X-Lang: te`. The agent then replies in Telugu and keeps DTR codes, numbers and units as they are. Tool results are sent to the model in English to save tokens. |
-| Offline copilot | Understands Telugu keywords, for example సంతృప్త, అంచనా, వోల్టేజ్, ప్రమాదం, దరఖాస్తు and కుసుమ్, and answers in Telugu. |
+| Offline copilot | Understands Telugu keywords, for example à°¸à°‚à°¤à±ƒà°ªà±à°¤, à°…à°‚à°šà°¨à°¾, à°µà±‹à°²à±à°Ÿà±‡à°œà±, à°ªà±à°°à°®à°¾à°¦à°‚, à°¦à°°à°–à°¾à°¸à±à°¤à± and à°•à±à°¸à±à°®à±, and answers in Telugu. |
 | Font | Noto Sans Telugu from Google Fonts, with a taller line height for Telugu script. |
 
 To add another language, add a file such as `static/locales/hi.json`, add a `hi` entry to each message in `app/i18n.py`, and add a button to the language switch.
@@ -188,22 +198,22 @@ For each DTR, the app learns a model from its own last 14 days of meter and weat
 
 | Parameter | How it is derived |
 |---|---|
-| Performance ratio (PR) | Median of metered solar ÷ ideal PV output, on hours above 300 W/m² |
+| Performance ratio (PR) | Median of metered solar Ã· ideal PV output, on hours above 300 W/mÂ² |
 | Peak generation per kW (g) | 98th percentile of normalised output: the planning case of a bright noon |
 | Minimum midday load (L_min) | 10th percentile of load between 10:00 and 15:00: the worst case for export |
-| Voltage model `V = a + b·export` | Least-squares fit on hourly voltage against net export (R² is shown) |
+| Voltage model `V = a + bÂ·export` | Least-squares fit on hourly voltage against net export (RÂ² is shown) |
 
 **Hosting capacity** is how much more PV the DTR can take. It is the minimum of three limits:
 
-* reverse flow: `(REVERSE_FLOW_LIMIT_PCT·kVA + L_min)/g − existing PV`
-* voltage: `((VOLTAGE_UPPER_PU − a)/b + L_min)/g − existing PV`
-* policy cap: `POLICY_CAP_PCT·kVA − existing PV`
+* reverse flow: `(REVERSE_FLOW_LIMIT_PCTÂ·kVA + L_min)/g âˆ’ existing PV`
+* voltage: `((VOLTAGE_UPPER_PU âˆ’ a)/b + L_min)/g âˆ’ existing PV`
+* policy cap: `POLICY_CAP_PCTÂ·kVA âˆ’ existing PV`
 
 Feeder capacity is the smaller of the sum of its DTRs' capacities and the feeder's own reverse-flow limit.
 
 **Status.** A DTR is *saturated* when utilisation is at least 90% or headroom is below 3% of kVA. It is on *watch* when utilisation is at least 70%, when queued applications exceed headroom, or when it is projected to saturate within 12 months at its last-12-month adoption rate.
 
-**Forecast.** For each hour, solar = PV kW × GHI/1000 × PR × temperature derate. Load is the mean for that hour of day over the last 7 days. Net export = solar − load, and voltage comes from the fitted model. An hour is flagged when voltage or reverse flow exceeds its limit.
+**Forecast.** For each hour, solar = PV kW Ã— GHI/1000 Ã— PR Ã— temperature derate. Load is the mean for that hour of day over the last 7 days. Net export = solar âˆ’ load, and voltage comes from the fitted model. An hour is flagged when voltage or reverse flow exceeds its limit.
 
 **Clearance** works first come, first served. Headroom is hosting capacity minus the kW already queued ahead of the application. KUSUM requests are also checked against the feeder's headroom. If the request fits in the headroom, the result is *clear*. If at least 1 kW of headroom is left, it is *partial*, with the largest clearable size or export limiting suggested. Otherwise it is *reject*, with DTR augmentation suggested.
 

@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS substations (
     id        INTEGER PRIMARY KEY AUTOINCREMENT,
     code      TEXT    NOT NULL UNIQUE,
     name      TEXT    NOT NULL,
+    name_te   TEXT,                       -- Telugu name
     latitude  REAL    NOT NULL,
     longitude REAL    NOT NULL
 );
@@ -27,6 +28,7 @@ CREATE TABLE IF NOT EXISTS feeders (
     substation_id INTEGER NOT NULL REFERENCES substations(id) ON DELETE CASCADE,
     code          TEXT    NOT NULL UNIQUE,
     name          TEXT    NOT NULL,
+    name_te       TEXT,                   -- Telugu name
     voltage_kv    REAL    NOT NULL DEFAULT 11,
     rating_kva    REAL    NOT NULL CHECK (rating_kva > 0),
     created_at    TEXT    NOT NULL DEFAULT (datetime('now'))
@@ -36,7 +38,8 @@ CREATE TABLE IF NOT EXISTS dtrs (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     feeder_id  INTEGER NOT NULL REFERENCES feeders(id) ON DELETE CASCADE,
     code       TEXT    NOT NULL UNIQUE,
-    name       TEXT    NOT NULL,
+    name       TEXT    NOT NULL,          -- locality, e.g. Pet Basheerabad
+    name_te    TEXT,                      -- Telugu locality name
     rating_kva REAL    NOT NULL CHECK (rating_kva > 0),
     area_type  TEXT    NOT NULL DEFAULT 'urban' CHECK (area_type IN ('urban', 'rural', 'agri')),
     created_at TEXT    NOT NULL DEFAULT (datetime('now'))

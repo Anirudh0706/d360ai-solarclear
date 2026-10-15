@@ -25,7 +25,8 @@ def list_substations(conn: sqlite3.Connection = Depends(get_db)):
 @router.get("/feeders")
 def list_feeders(conn: sqlite3.Connection = Depends(get_db)):
     return fetch_all(conn, """
-        SELECT f.*, s.code AS substation_code, COUNT(d.id) AS dtr_count
+        SELECT f.*, s.code AS substation_code, s.name AS substation_name, s.name_te AS substation_name_te,
+               COUNT(d.id) AS dtr_count
         FROM feeders f JOIN substations s ON s.id = f.substation_id
         LEFT JOIN dtrs d ON d.feeder_id = f.id
         GROUP BY f.id ORDER BY f.code""")

@@ -218,7 +218,8 @@ async function viewDashboard() {
 
 function feederCard(f) {
   return `<div class="card">
-    <h3>${esc(f.feeder_code)} <span class="muted small">${esc(f.feeder_name)}</span></h3>
+    <h3>${esc(pick(f, "feeder_name"))} <span class="muted small">${esc(f.feeder_code)}</span></h3>
+    <div class="small muted" style="margin:-4px 0 8px">${esc(pick(f, "substation_name"))}</div>
     <div class="row small muted" style="gap:18px">
       <span>${esc(t("feeder.solar", { kw: num(f.existing_pv_kw, 0) }))}</span>
       <span>${esc(t("feeder.headroom", { kw: num(f.hosting_kw, 0) }))}</span>
@@ -237,7 +238,7 @@ function utilBar(pct) {
 
 function dtrRow(d) {
   return `<tr class="click" data-dtr="${d.dtr_id}">
-    <td><b>${esc(d.dtr_code)}</b><div class="small muted">${esc(t(`area.${d.area_type}`))}</div></td><td>${esc(d.feeder_code)}</td>
+    <td><b>${esc(pick(d, "dtr_name"))}</b><div class="small muted">${esc(d.dtr_code)} · ${esc(t(`area.${d.area_type}`))}</div></td><td>${esc(d.feeder_code)}</td>
     <td class="num">${num(d.rating_kva, 0)}</td><td class="num">${num(d.existing_pv_kw)}</td><td class="num">${num(d.hosting_kw)}</td>
     <td>${utilBar(d.utilisation_pct)}</td><td>${esc(limitName(d.binding_constraint))}</td>
     <td class="num">${d.months_to_saturation === null ? t("ui.na") : num(d.months_to_saturation)}</td><td>${statusChip(d.status)}</td></tr>`;
@@ -275,8 +276,8 @@ async function viewDtr(id) {
   main().innerHTML = `
     <div class="page-head">
       <div><a href="#dashboard" class="small">${esc(t("dtr.back"))}</a>
-        <h1>${esc(hc.dtr_code)} <span class="muted" style="font-weight:400">${esc(hc.dtr_name)}</span></h1>
-        <div class="muted">${esc(t("dtr.meta", { feeder: hc.feeder_code, kva: num(hc.rating_kva, 0), n: hc.consumers, area: t(`area.${hc.area_type}`) }))}</div></div>
+        <h1>${esc(pick(hc, "dtr_name"))} <span class="muted" style="font-weight:400">${esc(hc.dtr_code)}</span></h1>
+        <div class="muted">${esc(t("dtr.meta", { feeder: pick(hc, "feeder_name"), kva: num(hc.rating_kva, 0), n: hc.consumers, area: t(`area.${hc.area_type}`) }))}</div></div>
       <div>${statusChip(hc.status)}</div>
     </div>
     <div class="grid kpis">
@@ -391,7 +392,7 @@ async function viewApplications() {
       <div class="muted">${esc(t("apps.sub"))}</div></div></div>
     <div class="card"><h2>${esc(t("apps.new"))}</h2>
       <form id="app-form" class="form-row">
-        <label>${esc(t("th.dtr"))}<select name="dtr_id" required>${dtrs.map((d) => `<option value="${d.id}">${esc(d.code)} (${num(d.rating_kva, 0)} kVA)</option>`).join("")}</select></label>
+        <label>${esc(t("th.dtr"))}<select name="dtr_id" required>${dtrs.map((d) => `<option value="${d.id}">${esc(d.code)} · ${esc(pick(d, "name"))} (${num(d.rating_kva, 0)} kVA)</option>`).join("")}</select></label>
         <label>${esc(t("apps.applicant"))}<input name="applicant_name" required minlength="2" placeholder="${esc(t("apps.namePh"))}"></label>
         <label>${esc(t("feas.scheme"))}<select name="scheme"><option value="rooftop">${esc(t("scheme.rooftop"))}</option><option value="kusum">${esc(t("scheme.kusum"))}</option></select></label>
         <label>${esc(t("apps.kw"))}<input name="requested_kw" type="number" min="0.5" step="0.5" required></label>
@@ -449,7 +450,7 @@ function appRow(a) {
   const rec = a.recommendation
     ? `${statusChip(a.recommendation, `${t(`status.${a.recommendation}`)} · ${num(a.recommended_kw)} kW`)}<div class="small muted" style="max-width:380px">${esc(pick(a, "decision_reason"))}</div>`
     : `<span class="muted small">${esc(t("apps.notEval"))}</span>`;
-  return `<tr><td>${a.id}</td><td>${esc(a.applicant_name)}</td><td><a href="#dtr/${a.dtr_id}">${esc(a.dtr_code)}</a></td><td>${esc(t(`scheme.${a.scheme}`))}</td>
+  return `<tr><td>${a.id}</td><td>${esc(a.applicant_name)}</td><td><a href="#dtr/${a.dtr_id}">${esc(a.dtr_code)}</a><div class="small muted">${esc(pick(a, "dtr_name"))}</div></td><td>${esc(t(`scheme.${a.scheme}`))}</td>
     <td class="num">${num(a.requested_kw)} kW</td>
     <td>${statusChip(a.status)}${a.approved_kw ? `<div class="small muted">${esc(t("apps.by", { kw: num(a.approved_kw), name: a.decided_by_name }))}</div>` : ""}</td>
     <td>${rec}</td><td><div class="row" style="gap:4px;flex-wrap:nowrap">${actions}</div></td></tr>`;
@@ -466,7 +467,7 @@ async function viewAlerts() {
       <div class="alert-row" style="${a.acknowledged ? "opacity:.55" : ""}">
         <div>${statusChip(a.severity)}</div>
         <div>${esc(pick(a, "message"))}<span class="tag">${esc(t(`alertType.${a.alert_type}`))}</span>
-          <div class="small muted"><a href="#dtr/${a.dtr_id}">${esc(a.dtr_code)}</a> · ${esc(t("alerts.raised", { t: a.created_at }))}</div></div>
+          <div class="small muted"><a href="#dtr/${a.dtr_id}">${esc(a.dtr_code)} · ${esc(pick(a, "dtr_name"))}</a> · ${esc(t("alerts.raised", { t: a.created_at }))}</div></div>
         <div>${a.acknowledged ? `<span class="small muted">${esc(t("alerts.acked"))}</span>` : `<button class="btn small" data-ack="${a.id}">${esc(t("btn.ack"))}</button>`}</div>
       </div>`).join("") : `<div class="empty">${esc(t("alerts.none"))}</div>`}</div>
     <p class="hint section">${esc(t("alerts.open", { n: open.length }))}</p>`;
@@ -551,22 +552,22 @@ async function viewAssets() {
     <div class="page-head"><div><h1>${L("assets.title")}</h1><div class="muted">${L(admin ? "assets.admin" : "assets.readonly")}</div></div></div>
     <div class="card"><h2>${L("assets.feeders")}</h2>
       ${admin ? `<form id="feeder-form" class="form-row">
-        <label>${L("assets.substation")}<select name="substation_id">${subs.map((s) => `<option value="${s.id}">${esc(s.code)}</option>`).join("")}</select></label>
+        <label>${L("assets.substation")}<select name="substation_id">${subs.map((s) => `<option value="${s.id}">${esc(pick(s, "name"))}</option>`).join("")}</select></label>
         <label>${L("assets.code")}<input name="code" required placeholder="FDR-N3"></label><label>${L("assets.name")}<input name="name" required></label>
         <label>${L("assets.rating")}<input name="rating_kva" type="number" min="1" required value="4000"></label>
         <button class="btn primary">${L("assets.addFeeder")}</button></form>` : ""}
       <div class="table-wrap section"><table><thead><tr><th>${L("th.code")}</th><th>${L("th.name")}</th><th>${L("th.substation")}</th><th class="num">${L("th.kv")}</th><th class="num">${L("th.kva")}</th><th class="num">${L("th.dtrs")}</th><th></th></tr></thead>
-      <tbody>${feeders.map((f) => `<tr><td><b>${esc(f.code)}</b></td><td>${esc(f.name)}</td><td>${esc(f.substation_code)}</td><td class="num">${f.voltage_kv}</td><td class="num">${num(f.rating_kva, 0)}</td><td class="num">${f.dtr_count}</td>
+      <tbody>${feeders.map((f) => `<tr><td><b>${esc(f.code)}</b></td><td>${esc(pick(f, "name"))}</td><td>${esc(pick(f, "substation_name"))}</td><td class="num">${f.voltage_kv}</td><td class="num">${num(f.rating_kva, 0)}</td><td class="num">${f.dtr_count}</td>
         <td>${admin ? `<button class="btn small ghost danger" data-del-feeder="${f.id}">${L("btn.delete")}</button>` : ""}</td></tr>`).join("")}</tbody></table></div></div>
     <div class="card section"><h2>${L("table.dtrs")}</h2>
       ${admin ? `<form id="dtr-form" class="form-row">
-        <label>${L("th.feeder")}<select name="feeder_id">${feeders.map((f) => `<option value="${f.id}">${esc(f.code)}</option>`).join("")}</select></label>
+        <label>${L("th.feeder")}<select name="feeder_id">${feeders.map((f) => `<option value="${f.id}">${esc(f.code)} · ${esc(pick(f, "name"))}</option>`).join("")}</select></label>
         <label>${L("assets.code")}<input name="code" required placeholder="DTR-N1-05"></label><label>${L("assets.name")}<input name="name" required></label>
         <label>${L("assets.rating")}<input name="rating_kva" type="number" min="1" required value="100"></label>
         <label>${L("assets.area")}<select name="area_type">${["urban", "rural", "agri"].map((a) => `<option value="${a}">${L(`area.${a}`)}</option>`).join("")}</select></label>
         <button class="btn primary">${L("assets.addDtr")}</button></form>` : ""}
       <div class="table-wrap section"><table><thead><tr><th>${L("th.code")}</th><th>${L("th.name")}</th><th>${L("th.feeder")}</th><th>${L("th.area")}</th><th class="num">${L("th.kva")}</th><th class="num">${L("th.consumers")}</th><th class="num">${L("th.solarKw")}</th><th></th></tr></thead>
-      <tbody>${dtrs.map((d) => `<tr><td><a href="#dtr/${d.id}"><b>${esc(d.code)}</b></a></td><td>${esc(d.name)}</td><td>${esc(d.feeder_code)}</td><td>${L(`area.${d.area_type}`)}</td>
+      <tbody>${dtrs.map((d) => `<tr><td><a href="#dtr/${d.id}"><b>${esc(d.code)}</b></a></td><td>${esc(pick(d, "name"))}</td><td>${esc(d.feeder_code)}</td><td>${L(`area.${d.area_type}`)}</td>
         <td class="num">${num(d.rating_kva, 0)}</td><td class="num">${d.consumer_count}</td><td class="num">${num(d.pv_kw)}</td>
         <td>${admin ? `<div class="row" style="gap:4px;flex-wrap:nowrap"><button class="btn small ghost" data-edit-dtr="${d.id}" data-kva="${d.rating_kva}">${L("assets.upgrade")}</button><button class="btn small ghost danger" data-del-dtr="${d.id}">${L("btn.delete")}</button></div>` : ""}</td></tr>`).join("")}</tbody></table></div></div>`;
   if (!admin) return;

@@ -46,7 +46,7 @@ def list_alerts(include_acknowledged: bool = False, conn: sqlite3.Connection = D
                 _: dict = Depends(current_user)):
     where = "" if include_acknowledged else "WHERE a.acknowledged = 0"
     return fetch_all(conn, f"""
-        SELECT a.*, d.code AS dtr_code FROM alerts a JOIN dtrs d ON d.id = a.dtr_id {where}
+        SELECT a.*, d.code AS dtr_code, d.name AS dtr_name, d.name_te AS dtr_name_te FROM alerts a JOIN dtrs d ON d.id = a.dtr_id {where}
         ORDER BY a.acknowledged, CASE a.severity WHEN 'critical' THEN 0 WHEN 'warning' THEN 1 ELSE 2 END, a.id""")
 
 

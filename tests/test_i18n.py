@@ -86,6 +86,25 @@ def test_default_language_is_english(client, engineer):
     assert not TELUGU.search(r["answer"])
 
 
+def test_dtrs_have_telangana_locality_names(client, engineer):
+    hc = client.get(f"/api/analytics/hosting/dtr/{dtr_id(client, engineer, 'DTR-S1-02')}", headers=engineer).json()
+    assert hc["dtr_name"] == "Farooqnagar" and hc["dtr_name_te"] == "ఫరూఖ్‌నగర్"
+    assert "Shadnagar" in hc["feeder_name"] and TELUGU.search(hc["feeder_name_te"])
+
+
+def test_dtr_found_by_locality_name(client, engineer):
+    en = client.post("/api/agent/chat", headers=engineer, json={"message": "Hosting capacity at Pet Basheerabad?"}).json()
+    assert en["tools_used"] == ["dtr_hosting_capacity"] and "DTR-N1-03 (Pet Basheerabad)" in en["answer"]
+    te = client.post("/api/agent/chat", headers={**engineer, **TE}, json={"message": "ఫరూఖ్‌నగర్ లో 3 kW కలపవచ్చా?"}).json()
+    assert te["tools_used"] == ["netmeter_feasibility"] and "ఫరూఖ్‌నగర్" in te["answer"]
+
+
+def test_alerts_name_the_locality(client, engineer):
+    client.post("/api/agent/scan", headers=engineer, json={})
+    alert = next(a for a in client.get("/api/alerts", headers=engineer).json() if a["dtr_code"] == "DTR-S1-02")
+    assert "DTR-S1-02 (Farooqnagar)" in alert["message"] and "ఫరూఖ్‌నగర్" in alert["message_te"]
+
+
 def test_tr_resolves_translatable_values():
     assert tr("alert.watch", "te", dtr="DTR-X", util=75, hc=10).startswith("DTR-X హోస్టింగ్")
     assert tr("limit.voltage", "xx") == "voltage rise"  # unknown language falls back to English

@@ -12,7 +12,8 @@ from app.services.clearance import approve_application, evaluate_application
 router = APIRouter(prefix="/api/applications", tags=["applications"])
 
 SELECT_APP = """
-    SELECT a.*, d.code AS dtr_code, f.code AS feeder_code, u.name AS decided_by_name
+    SELECT a.*, d.code AS dtr_code, d.name AS dtr_name, d.name_te AS dtr_name_te, f.code AS feeder_code,
+           u.name AS decided_by_name
     FROM applications a JOIN dtrs d ON d.id = a.dtr_id JOIN feeders f ON f.id = d.feeder_id
     LEFT JOIN users u ON u.id = a.decided_by"""
 

@@ -12,7 +12,7 @@ import json
 import sqlite3
 
 from app.agent.llm import complete, get_client, usage_of
-from app.analytics.grid import detect_risks, network_hosting
+from app.analytics.grid import detect_risks, network_hosting, place
 from app.database import fetch_all
 from app.i18n import both, tr, word
 from app.services.clearance import evaluate_application
@@ -38,11 +38,11 @@ def run_scan(conn: sqlite3.Connection, user_id: int | None, with_brief: bool = F
     # Each alert: (dtr_id, type, severity, message_en, message_te, forecast_for)
     alerts = []
     for e in risks:
-        msg = {lg: tr("alert.risk", lg, dtr=e["dtr_code"], detail=e["detail" if lg == "en" else "detail_te"],
+        msg = {lg: tr("alert.risk", lg, dtr=place(e), detail=e["detail" if lg == "en" else "detail_te"],
                         hours=e["hours"], first=e["first_at"]) for lg in ("en", "te")}
         alerts.append((e["dtr_id"], e["risk"], e["severity"], msg["en"], msg["te"], e["first_at"]))
     for d in network["dtrs"]:
-        common = {"dtr": d["dtr_code"], "util": d["utilisation_pct"], "hc": d["hosting_kw"]}
+        common = {"dtr": place(d), "util": d["utilisation_pct"], "hc": d["hosting_kw"]}
         if d["status"] == "saturated":
             en, te = both("alert.saturated", label=word(f"limit.{d['binding_constraint']}"), **common)
             alerts.append((d["dtr_id"], "saturation", "critical", en, te, None))
