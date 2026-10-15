@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>D360 AI SolarClear</title>
+  <link rel="icon" type="image/png" href="/static/img/d360ai-logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <!-- Login / registration -->
+  <section id="auth-view" class="auth" hidden>
+    <div class="auth-card">
+      <img class="logo" src="/static/img/d360ai-logo-cropped.png" alt="D360 AI Vision">
+      <div class="product">SolarClear &middot; Grid Intelligence</div>
+      <p class="muted">AI-driven solar hosting capacity &amp; net-meter clearance for distribution utilities</p>
+      <div class="tabs">
+        <button class="tab active" data-auth-tab="login">Sign in</button>
+        <button class="tab" data-auth-tab="register">Register</button>
+      </div>
+      <form id="login-form" class="stack">
+        <label>Email<input name="email" type="email" required autocomplete="username" value="engineer@solarclear.local"></label>
+        <label>Password<input name="password" type="password" required autocomplete="current-password" value="Engineer@123"></label>
+        <button class="btn primary" type="submit">Sign in</button>
+        <p class="hint">Demo: engineer@solarclear.local / Engineer@123 &middot; admin@solarclear.local / Admin@123</p>
+      </form>
+      <form id="register-form" class="stack" hidden>
+        <label>Full name<input name="name" required minlength="2"></label>
+        <label>Email<input name="email" type="email" required></label>
+        <label>Password<input name="password" type="password" required minlength="8" placeholder="8+ chars, letters and digits"></label>
+        <button class="btn primary" type="submit">Create account</button>
+      </form>
+      <p id="auth-error" class="error" role="alert"></p>
+    </div>
+  </section>
+
+  <!-- Application shell -->
+  <div id="app-view" class="shell" hidden>
+    <aside class="sidebar">
+      <div class="brand"><span class="logo-chip"><img class="logo" src="/static/img/d360ai-logo-cropped.png" alt="D360 AI Vision"></span><span class="product">SolarClear</span></div>
+      <nav>
+        <a href="#dashboard" data-nav="dashboard">Dashboard</a>
+        <a href="#applications" data-nav="applications">Applications</a>
+        <a href="#alerts" data-nav="alerts">Alerts <span id="alert-count" class="pill" hidden></span></a>
+        <a href="#copilot" data-nav="copilot">D360 AI Copilot</a>
+        <a href="#assets" data-nav="assets">Network assets</a>
+        <a href="#runs" data-nav="runs">Agent log</a>
+      </nav>
+      <div class="sidebar-foot">
+        <div id="agent-mode" class="muted small"></div>
+        <div id="user-label" class="small"></div>
+        <button id="logout" class="btn ghost small">Sign out</button>
+      </div>
+    </aside>
+    <main id="main" class="main" tabindex="-1"></main>
+  </div>
+  <div id="toast" class="toast" role="status" hidden></div>
+  <script src="/static/app.js"></script>
+</body>
+</html>
