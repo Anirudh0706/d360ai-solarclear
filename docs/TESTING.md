@@ -8,7 +8,7 @@
 * The D360 AI tool-calling loop is tested with a fake engine, and the HTTPS client is tested with a stubbed network.
 * Each test module gets a fresh SQLite database with the seeded sample data.
 
-**Latest run:** 67 passed, 0 failed, in 5.4 s (Python 3.12.10, Windows 11).
+**Latest run:** 70 passed, 0 failed, in 5.5 s (Python 3.12.10, Windows 11).
 
 ## Test cases
 
@@ -43,18 +43,18 @@
 
 | # | Test case | Expected result | Actual result | Status |
 |---|---|---|---|---|
-| 18 | Clear-sky irradiance at noon and at night | 750 to 1050 W/mÂ² at noon, 0 at night | As expected | Pass |
-| 19 | PV temperature derating | Hot output < cool output â‰¤ rating; 0 output at 0 irradiance | As expected | Pass |
-| 20 | Least-squares fit on a known line | Recovers a, b and RÂ² = 1 | As expected | Pass |
-| 21 | Voltage sensitivity learned from meter data | Within 20% of the seeded true value (0.0007 pu/kW); RÂ² > 0.6 | As expected | Pass |
+| 18 | Clear-sky irradiance at noon and at night | 750 to 1050 W/m² at noon, 0 at night | As expected | Pass |
+| 19 | PV temperature derating | Hot output < cool output ≤ rating; 0 output at 0 irradiance | As expected | Pass |
+| 20 | Least-squares fit on a known line | Recovers a, b and R² = 1 | As expected | Pass |
+| 21 | Voltage sensitivity learned from meter data | Within 20% of the seeded true value (0.0007 pu/kW); R² > 0.6 | As expected | Pass |
 | 22 | Over-penetrated rural DTR (S1-02) | Status `saturated`, 0 kW headroom, voltage-bound | As expected | Pass |
 | 23 | Lightly loaded DTR (N2-03) | Status `available`, more than 50 kW headroom, equal to the smallest limit | As expected | Pass |
-| 24 | Overview: feeder hosting compared with the sum of its DTRs | Feeder hosting â‰¤ sum of its DTRs; 2 or more saturated | As expected | Pass |
+| 24 | Overview: feeder hosting compared with the sum of its DTRs | Feeder hosting ≤ sum of its DTRs; 2 or more saturated | As expected | Pass |
 | 25 | Saturated list | Only saturated and watch DTRs, sorted by utilisation in descending order | As expected | Pass |
-| 26 | 48-hour forecast physics | 48 points; solar â‰¥ 0; export = solar âˆ’ load; no solar at night | As expected | Pass |
+| 26 | 48-hour forecast physics | 48 points; solar ≥ 0; export = solar − load; no solar at night | As expected | Pass |
 | 27 | Forecast with an unknown DTR, or `hours=500` | 404 and 422 | 404 and 422 | Pass |
 | 28 | Risk detection | Overvoltage event for DTR-S1-02 | Detected | Pass |
-| 29 | Feasibility check | 5 kW on N2-03 â†’ clear; 5 kW on S1-02 â†’ reject; 0 kW â†’ 422 | As expected | Pass |
+| 29 | Feasibility check | 5 kW on N2-03 → clear; 5 kW on S1-02 → reject; 0 kW → 422 | As expected | Pass |
 
 ### Application workflow ([tests/test_applications.py](../tests/test_applications.py))
 
@@ -62,7 +62,7 @@
 |---|---|---|---|---|
 | 30 | Submit and evaluate an application | Saved as pending; agent result is `clear`; status becomes `evaluated` | As expected | Pass |
 | 31 | Application on a saturated DTR | `reject`, 0 kW | As expected | Pass |
-| 32 | Request larger than headroom | `partial` or `reject`; recommended kW â‰¤ headroom | As expected | Pass |
+| 32 | Request larger than headroom | `partial` or `reject`; recommended kW ≤ headroom | As expected | Pass |
 | 33 | Two applications competing for the same headroom | First is `clear`; second is limited by the queue ahead of it | As expected | Pass |
 | 34 | Approve an application | PV is added to the DTR; hosting capacity falls; consumer is created | As expected | Pass |
 | 35 | Decide before evaluating | 409 | 409 | Pass |
@@ -99,12 +99,23 @@
 | 56 | Telugu UI text for key labels | Written in Telugu script | As expected | Pass |
 | 57 | Every server message template | Has both an English and a Telugu version | As expected | Pass |
 | 58 | Feasibility check on a saturated DTR | English reason and Telugu `reason_te`, both containing the DTR code | As expected | Pass |
-| 59 | Application whose applicant name is in Telugu (à°°à°®à±‡à°·à±) | Name is saved and read back correctly; reason stored in both languages | As expected | Pass |
+| 59 | Application whose applicant name is in Telugu (రమేష్) | Name is saved and read back correctly; reason stored in both languages | As expected | Pass |
 | 60 | Grid-Watch scan with `X-Lang: te` | Summary in Telugu; every alert has a Telugu message | As expected | Pass |
-| 61 | Offline copilot asked a Telugu question about kW on a DTR | Uses the feasibility tool; answer in Telugu ("à°…à°¨à±à°®à°¤à°¿à°‚à°šà°µà°šà±à°šà±") | As expected | Pass |
-| 62 | Telugu keywords such as à°¸à°‚à°¤à±ƒà°ªà±à°¤ (saturated) and à°µà±‹à°²à±à°Ÿà±‡à°œà± à°ªà±à°°à°®à°¾à°¦à°‚ (voltage risk) | Routed to the right tool | As expected | Pass |
+| 61 | Offline copilot asked a Telugu question about kW on a DTR | Uses the feasibility tool; answer in Telugu ("అనుమతించవచ్చు") | As expected | Pass |
+| 62 | Telugu keywords such as సంతృప్త (saturated) and వోల్టేజ్ ప్రమాదం (voltage risk) | Routed to the right tool | As expected | Pass |
 | 63 | Request with no language header | Answer in English | English | Pass |
 | 64 | Message formatting with a translated word and an unknown language | Telugu text produced; unknown language falls back to English | As expected | Pass |
+| 65 | DTR has a Telangana locality name | DTR-S1-02 is Farooqnagar / ఫరూఖ్‌నగర్; its feeder is the Shadnagar feeder | As expected | Pass |
+| 66 | Ask about a DTR by place name in English and in Telugu | "Pet Basheerabad" and "ఫరూఖ్‌నగర్" resolve to the right DTR | As expected | Pass |
+| 67 | Alert text names the place | Contains "DTR-S1-02 (Farooqnagar)" in English and ఫరూఖ్‌నగర్ in Telugu | As expected | Pass |
+
+### D360 AI engine client ([tests/test_agent.py](../tests/test_agent.py))
+
+| # | Test case | Expected result | Actual result | Status |
+|---|---|---|---|---|
+| 68 | Engine returns a tool call | Tool name, token usage and the `api-key` header are handled correctly | As expected | Pass |
+| 69 | Engine rejects the `reasoning_effort` setting | Retries once without it and succeeds | As expected | Pass |
+| 70 | Engine returns an HTTP error (401) | Raises a clear engine error, which the copilot turns into the offline fallback | As expected | Pass |
 
 ## Manual and integration testing
 
@@ -120,7 +131,7 @@ These checks ran against the live server (`uvicorn`), with the real D360 AI engi
 | Copilot: "Can I connect 8 kW rooftop on DTR-S1-04?" | Called `netmeter_feasibility`; answered *partial, 5.0 kW, voltage-bound*. 1,385 + 160 tokens. |
 | Copilot: "Which DTRs are saturated on feeder S1?" | Called `list_dtrs` twice; correct list. 1,477 + 256 tokens. |
 | Telugu scan with brief (`X-Lang: te`) | Summary, alerts and a 4-bullet brief, all in Telugu. 336 + 354 tokens. |
-| Telugu copilot: "DTR-S1-04 à°•à°¿ 8 kW à°°à±‚à°«à±â€Œà°Ÿà°¾à°ªà± à°¸à°¿à°¸à±à°Ÿà°®à± à°•à°²à°ªà°µà°šà±à°šà°¾?" ("Can an 8 kW rooftop system be added on DTR-S1-04?") | Called `dtr_hosting_capacity` and `netmeter_feasibility`; answered in Telugu: not feasible, voltage-bound. |
+| Telugu copilot: "DTR-S1-04 కి 8 kW రూఫ్‌టాప్ సిస్టమ్ కలపవచ్చా?" ("Can an 8 kW rooftop system be added on DTR-S1-04?") | Called `dtr_hosting_capacity` and `netmeter_feasibility`; answered in Telugu: not feasible, voltage-bound. |
 | Copilot: "How much more KUSUM solar can feeder S2 absorb?" | Called `network_overview`; answered 388.5 kW headroom. 1,510 + 150 tokens. |
 
 ## Bugs identified
