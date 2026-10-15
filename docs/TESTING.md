@@ -1,4 +1,4 @@
-﻿# Testing evidence
+# Testing evidence
 
 **How to run:** `python -m pytest -v` (from the project root)
 

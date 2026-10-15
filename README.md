@@ -1,4 +1,4 @@
-﻿# SolarClear: Agentic Solar Hosting-Capacity & Net-Meter Clearance
+# SolarClear: Agentic Solar Hosting-Capacity & Net-Meter Clearance
 
 SolarClear helps a power distribution utility (DISCOM) decide where rooftop and PM-KUSUM solar can connect. It covers four tasks:
 
