@@ -21,12 +21,12 @@ Net-meter feasibility is usually a manual engineering judgement. SolarClear turn
 | DTR page | Three hosting limits (reverse flow, voltage, policy cap) with the binding one marked. Shows the learned model parameters, a 48-hour power and voltage forecast with hover tooltips and a data table, a feasibility checker, and the consumer list. |
 | Applications (CRUD) | Create, evaluate (agent), edit, approve or reject (engineer), and delete. Approving an application adds its PV to the DTR, so hosting capacity updates immediately. |
 | Grid-Watch agent | Autonomous scan. Forecasts every DTR, raises alerts, evaluates every pending application, pushes critical alerts to a webhook, and can optionally write an AI shift brief. |
-| Planning Copilot | Chat agent on Azure OpenAI with tool calling over the analytics engine. It answers questions such as "Can DTR-S1-04 take 8 kW?" using real computed numbers. |
+| D360 AI Copilot | Chat agent on the D360 AI engine with tool calling over the analytics engine. It answers questions such as "Can DTR-S1-04 take 8 kW?" using real computed numbers. |
 | Alerts | Overvoltage, reverse-flow, saturation and pipeline alerts, each with a severity. Alerts can be acknowledged. |
 | Network assets (CRUD) | Admins add, upgrade (change kVA) and delete feeders and DTRs. Upgrading a DTR raises its hosting capacity straight away. |
 | Agent log | Audit trail of every agent run: tools used and tokens spent. |
 | English and Telugu (à°¤à±†à°²à±à°—à±) | A one-click language switch on the login screen and in the sidebar. See the "Languages" section below. |
-| Offline mode | Without Azure keys, a rule-based router answers through the same tools. Without internet access, a clear-sky weather model replaces Open-Meteo. |
+| Offline mode | Without a D360 AI key, a rule-based router answers through the same tools. Without internet access, a clear-sky weather model replaces Open-Meteo. |
 
 ## Technology stack
 
@@ -35,7 +35,7 @@ Net-meter feasibility is usually a manual engineering judgement. SolarClear turn
 | Backend | Python 3.11+ with FastAPI and Uvicorn | Small and fast, and it generates OpenAPI docs automatically at `/docs`. |
 | Database | SQLite through the standard-library `sqlite3` module | No server to install. The schema is plain SQL in [db/schema.sql](db/schema.sql). |
 | Analytics | Pure Python (sun position, PV model, least-squares fit, percentiles) | No numpy or pandas, so installs are tiny. |
-| AI agent | Azure OpenAI chat completions with tool calling (`openai` SDK) | Uses the team's existing Azure deployment. |
+| AI agent | D360 AI engine (chat completions with tool calling) over plain HTTPS | No vendor SDK; one `httpx` call per step. |
 | External API | [Open-Meteo](https://open-meteo.com) hourly irradiance and temperature forecast | Free and needs no key. A clear-sky model is used as fallback. |
 | Frontend | One HTML page with vanilla JS and CSS, charts drawn in hand-written SVG | No build step and no CDN. Supports light and dark themes and works on mobile. |
 | Tests | pytest with FastAPI TestClient | 67 tests that run offline in about 6 seconds. |
@@ -54,7 +54,7 @@ solarclear/
 â”‚   â”‚   â”œâ”€â”€ solar.py         # sun position, clear-sky GHI, PV output, regression
 â”‚   â”‚   â””â”€â”€ grid.py          # forecasting, hosting capacity, risks, feasibility
 â”‚   â”œâ”€â”€ agent/
-â”‚   â”‚   â”œâ”€â”€ llm.py           # Azure OpenAI client (token-capped)
+â”‚   â”‚   â”œâ”€â”€ llm.py           # D360 AI engine client (token-capped)
 â”‚   â”‚   â”œâ”€â”€ tools.py         # 7 read-only tools exposed to the agent
 â”‚   â”‚   â”œâ”€â”€ copilot.py       # tool-calling chat loop + offline router
 â”‚   â”‚   â””â”€â”€ gridwatch.py     # autonomous scan agent
@@ -91,16 +91,14 @@ cp .env.example .env        # Windows: copy .env.example .env
 
 ## Configuration and environment variables
 
-Edit `.env`. It is gitignored, so keys never reach the repository. Every value is optional; without the Azure values the app runs in offline mode.
+Edit `.env`. It is gitignored, so keys never reach the repository. Every value is optional; without the D360 AI values the app runs in offline mode.
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `AZURE_OPENAI_API_KEY` | none | Azure OpenAI key. |
-| `AZURE_OPENAI_ENDPOINT` | none | `https://<resource>.openai.azure.com` |
-| `AZURE_OPENAI_DEPLOYMENT` | none | The deployment name from Azure AI Foundry. This is not the model name. |
-| `AZURE_OPENAI_API_VERSION` | `2024-10-21` | Use `2025-04-01-preview` or later for `reasoning_effort`. |
+| `D360_AI_API_KEY` | none | D360 AI engine key. It is sent in the `api-key` header. |
+| `D360_AI_ENDPOINT` | none | The full chat-completions URL of your D360 AI endpoint. |
 | `AGENT_MAX_COMPLETION_TOKENS` | `2500` | Hard cap on output tokens for each model call. |
-| `AGENT_REASONING_EFFORT` | `low` | Reasoning depth for GPT-5-class models. Leave it empty to omit the parameter. |
+| `AGENT_REASONING_EFFORT` | `low` | Reasoning depth of the D360 AI engine. Leave it empty to omit the parameter. |
 | `SECRET_KEY` | dev key | Signs session tokens. **Set a long random value.** |
 | `TOKEN_TTL_HOURS` | `12` | How long a session lasts. |
 | `DATABASE_PATH` | `solarclear.db` | Location of the SQLite file. |
@@ -165,7 +163,7 @@ python -m uvicorn app.main:app --reload --port 8000
 ## API setup
 
 * **Internal REST API.** Every endpoint is under `/api`. Every route except register, login and health needs `Authorization: Bearer <token>`. The full reference with request and response examples is in [docs/API.md](docs/API.md), and the live version is at `/docs`.
-* **Azure OpenAI.** Put the 4 `AZURE_OPENAI_*` values from Azure AI Foundry in `.env`. The deployment must support tool or function calling; any GPT-4o, GPT-4.1 or GPT-5-class deployment does.
+* **D360 AI engine.** Put `D360_AI_API_KEY` and `D360_AI_ENDPOINT` in `.env`. The engine takes the standard chat-completions JSON (`messages`, `tools`, `max_completion_tokens`) and returns `choices[].message.tool_calls` and `usage`.
 * **Open-Meteo.** Needs no setup and no key. If the call fails, the forecast falls back to the clear-sky model automatically.
 * **Webhook (optional).** Set `NOTIFY_WEBHOOK_URL` to an incoming-webhook URL. It receives `{"text": "..."}` with critical alerts after each scan.
 

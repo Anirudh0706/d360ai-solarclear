@@ -29,7 +29,7 @@ async def lifespan(_: FastAPI):
         conn.close()
     if settings.secret_key == "dev-only-change-me":
         log.warning("SECRET_KEY is not set; using an insecure development key")
-    log.info("LLM agent: %s", "Azure OpenAI " + settings.azure_deployment if settings.llm_enabled else "offline mode")
+    log.info("Agent engine: %s", "D360 AI" if settings.llm_enabled else "offline rule mode")
     yield
 
 

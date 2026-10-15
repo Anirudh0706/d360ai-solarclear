@@ -127,7 +127,7 @@ CREATE TABLE IF NOT EXISTS agent_runs (
     question          TEXT,
     answer            TEXT,
     tools_used        TEXT,
-    mode              TEXT    NOT NULL CHECK (mode IN ('azure', 'offline')),
+    mode              TEXT    NOT NULL CHECK (mode IN ('d360', 'offline')),
     prompt_tokens     INTEGER NOT NULL DEFAULT 0,
     completion_tokens INTEGER NOT NULL DEFAULT 0,
     created_at        TEXT    NOT NULL DEFAULT (datetime('now'))

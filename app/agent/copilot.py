@@ -98,7 +98,7 @@ def _llm_chat(conn: sqlite3.Connection, client, message: str, history: list[dict
     return {
         "answer": answer or tr("bot.no_answer", lang),
         "tools_used": tools_used,
-        "mode": "azure",
+        "mode": "d360",
         "usage": {"prompt_tokens": prompt_tokens, "completion_tokens": completion_tokens},
     }
 

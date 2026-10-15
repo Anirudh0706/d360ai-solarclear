@@ -26,7 +26,7 @@
   "role.engineer": "engineer",
   "engine.online": "D360 AI engine online",
   "engine.offline": "D360 AI engine: offline (rule mode)",
-  "engine.azure": "D360 AI",
+  "engine.d360": "D360 AI",
   "engine.offlineName": "Rule engine",
 
   "ui.loading": "Loading…",

@@ -3,7 +3,7 @@ import os
 
 # Must run before the app imports config (real env vars win over .env).
 os.environ["WEATHER_PROVIDER"] = "clearsky"
-os.environ["AZURE_OPENAI_API_KEY"] = ""
+os.environ["D360_AI_API_KEY"] = ""
 os.environ["NOTIFY_WEBHOOK_URL"] = ""
 os.environ["SECRET_KEY"] = "test-secret"
 

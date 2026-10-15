@@ -26,7 +26,7 @@
   "role.engineer": "ఇంజనీర్",
   "engine.online": "D360 AI ఇంజిన్ ఆన్‌లైన్",
   "engine.offline": "D360 AI ఇంజిన్: ఆఫ్‌లైన్ (నియమ ఆధారిత మోడ్)",
-  "engine.azure": "D360 AI",
+  "engine.d360": "D360 AI",
   "engine.offlineName": "నియమ ఇంజిన్",
 
   "ui.loading": "లోడ్ అవుతోంది…",

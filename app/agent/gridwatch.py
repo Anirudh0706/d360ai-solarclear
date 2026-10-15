@@ -92,7 +92,7 @@ def run_scan(conn: sqlite3.Connection, user_id: int | None, with_brief: bool = F
             response = complete(client, [{"role": "system", "content": prompt},
                                          {"role": "user", "content": json.dumps(findings, separators=(",", ":"))}],
                                 max_tokens=1500)
-            brief, mode, tokens = (response.choices[0].message.content or "").strip() or None, "azure", usage_of(response)
+            brief, mode, tokens = (response.choices[0].message.content or "").strip() or None, "d360", usage_of(response)
         except Exception as exc:  # brief is optional; the scan itself already succeeded
             brief = f"(Brief unavailable: {type(exc).__name__})"
 

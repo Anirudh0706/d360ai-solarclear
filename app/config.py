@@ -69,22 +69,15 @@ class Settings:
     def notify_webhook_url(self) -> str:
         return os.environ.get("NOTIFY_WEBHOOK_URL", "")
 
-    # --- Azure OpenAI (same variable names as the other projects) ---
+    # --- D360 AI engine ---
     @property
-    def azure_api_key(self) -> str:
-        return os.environ.get("AZURE_OPENAI_API_KEY", "")
+    def d360_api_key(self) -> str:
+        return os.environ.get("D360_AI_API_KEY", "")
 
     @property
-    def azure_endpoint(self) -> str:
-        return os.environ.get("AZURE_OPENAI_ENDPOINT", "").rstrip("/")
-
-    @property
-    def azure_deployment(self) -> str:
-        return os.environ.get("AZURE_OPENAI_DEPLOYMENT", "")
-
-    @property
-    def azure_api_version(self) -> str:
-        return os.environ.get("AZURE_OPENAI_API_VERSION", "2024-10-21")
+    def d360_endpoint(self) -> str:
+        """Full chat-completions URL of the D360 AI engine (includes any version query string)."""
+        return os.environ.get("D360_AI_ENDPOINT", "").strip()
 
     @property
     def agent_max_tokens(self) -> int:
@@ -96,7 +89,7 @@ class Settings:
 
     @property
     def llm_enabled(self) -> bool:
-        return bool(self.azure_api_key and self.azure_endpoint and self.azure_deployment)
+        return bool(self.d360_api_key and self.d360_endpoint)
 
 
 settings = Settings()

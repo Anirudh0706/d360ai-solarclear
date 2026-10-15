@@ -1,4 +1,4 @@
-"""Agent behaviour: offline router, Grid-Watch scan, alerts, and the Azure tool-calling loop (mocked)."""
+"""Agent behaviour: offline router, Grid-Watch scan, alerts, and the D360 AI tool-calling loop (mocked)."""
 import json
 from types import SimpleNamespace
 
@@ -12,7 +12,7 @@ def ask(client, headers, message):
     return res.json()
 
 
-# ---------- offline router (no Azure keys)
+# ---------- offline router (no D360 AI key)
 def test_offline_feasibility_intent(client, engineer):
     r = ask(client, engineer, "Can DTR-N2-03 take a 5 kW rooftop?")
     assert r["mode"] == "offline" and r["tools_used"] == ["netmeter_feasibility"]
@@ -70,8 +70,8 @@ def test_agent_runs_logged(client, engineer):
     assert {"chat", "scan"} <= kinds
 
 
-# ---------- Azure tool-calling loop with a fake client
-class FakeAzure:
+# ---------- D360 AI tool-calling loop with a fake engine
+class FakeEngine:
     """Round 1: model asks for a tool. Round 2: model answers from the tool result."""
 
     def __init__(self):
@@ -91,12 +91,12 @@ class FakeAzure:
         return SimpleNamespace(choices=[SimpleNamespace(message=msg)], usage=usage)
 
 
-def test_azure_agent_loop_uses_tools(client, engineer, monkeypatch):
-    fake = FakeAzure()
+def test_d360_agent_loop_uses_tools(client, engineer, monkeypatch):
+    fake = FakeEngine()
     monkeypatch.setattr(copilot, "get_client", lambda: fake)
     monkeypatch.setattr(copilot, "complete", lambda client, messages, tools=None, max_tokens=None: fake.respond(messages))
     r = ask(client, engineer, "How much more solar can DTR-N1-03 take?")
-    assert r["mode"] == "azure"
+    assert r["mode"] == "d360"
     assert r["tools_used"] == ["dtr_hosting_capacity"]
     assert r["usage"] == {"prompt_tokens": 200, "completion_tokens": 40}
     assert "DTR-N1-03 can host" in r["answer"]
@@ -105,7 +105,7 @@ def test_azure_agent_loop_uses_tools(client, engineer, monkeypatch):
     assert "model" not in json.loads(tool_msg["content"])
 
 
-def test_azure_failure_falls_back_to_offline(client, engineer, monkeypatch):
+def test_engine_failure_falls_back_to_offline(client, engineer, monkeypatch):
     def boom(*_, **__):
         raise ConnectionError("network down")
 
@@ -127,7 +127,7 @@ def test_scan_brief_uses_single_llm_call(client, engineer, monkeypatch):
     monkeypatch.setattr(gridwatch, "get_client", lambda: object())
     monkeypatch.setattr(gridwatch, "complete", fake_complete)
     res = client.post("/api/agent/scan", headers=engineer, json={"with_brief": True}).json()
-    assert len(calls) == 1 and res["mode"] == "azure" and res["brief"].startswith("- DTR-S1-02")
+    assert len(calls) == 1 and res["mode"] == "d360" and res["brief"].startswith("- DTR-S1-02")
 
 
 def test_tool_input_validation(db):
@@ -135,3 +135,54 @@ def test_tool_input_validation(db):
     assert "error" in run_tool(db, "netmeter_feasibility", {"dtr_code": "DTR-N1-01", "kw": -2})
     assert "error" in run_tool(db, "list_dtrs", {"feeder_code": "FDR-ZZ"})
     assert "error" in run_tool(db, "nonexistent_tool", {"dtr_code": "DTR-N1-01"})
+
+
+# ---------- D360 AI HTTPS client (no network: httpx.post is replaced)
+class FakeResponse:
+    def __init__(self, status, body):
+        self.status_code, self._body = status, body
+        self.text = json.dumps(body)
+
+    def json(self):
+        return self._body
+
+
+def test_engine_client_parses_tool_calls(monkeypatch):
+    from app.agent import llm
+
+    body = {"choices": [{"message": {"content": None, "tool_calls": [
+        {"id": "c1", "type": "function", "function": {"name": "network_overview", "arguments": "{}"}}]}}],
+        "usage": {"prompt_tokens": 50, "completion_tokens": 5}}
+    sent = []
+    monkeypatch.setattr(llm.httpx, "post", lambda url, headers, json, timeout: sent.append((headers, json)) or FakeResponse(200, body))
+    resp = llm.complete(llm.D360Client("https://engine.example/chat", "k"), [{"role": "user", "content": "hi"}])
+    assert resp.choices[0].message.tool_calls[0].function.name == "network_overview"
+    assert llm.usage_of(resp) == (50, 5)
+    assert sent[0][0]["api-key"] == "k" and "max_completion_tokens" in sent[0][1]
+
+
+def test_engine_client_retries_without_reasoning_effort(monkeypatch):
+    from app.agent import llm
+
+    monkeypatch.setattr(llm, "_effort_supported", True)
+    calls = []
+
+    def fake_post(url, headers, json, timeout):
+        calls.append(dict(json))
+        if "reasoning_effort" in json:
+            return FakeResponse(400, {"error": {"message": "Unrecognized request argument: reasoning_effort"}})
+        return FakeResponse(200, {"choices": [{"message": {"content": "ok"}}]})
+
+    monkeypatch.setattr(llm.httpx, "post", fake_post)
+    resp = llm.complete(llm.D360Client("https://engine.example/chat", "k"), [{"role": "user", "content": "hi"}])
+    assert resp.choices[0].message.content == "ok" and resp.choices[0].message.tool_calls is None
+    assert len(calls) == 2 and "reasoning_effort" not in calls[1]
+
+
+def test_engine_http_error_raises(monkeypatch):
+    import pytest
+    from app.agent import llm
+
+    monkeypatch.setattr(llm.httpx, "post", lambda url, headers, json, timeout: FakeResponse(401, {"error": "bad key"}))
+    with pytest.raises(llm.EngineError):
+        llm.complete(llm.D360Client("https://engine.example/chat", "k", retries=0), [{"role": "user", "content": "hi"}])

@@ -4,8 +4,8 @@
 
 **Environment:**
 
-* The tests run fully offline. `WEATHER_PROVIDER=clearsky` is set, and the Azure key is blanked.
-* The Azure tool-calling loop is tested with a fake client.
+* The tests run fully offline. `WEATHER_PROVIDER=clearsky` is set, and the D360 AI key is blanked.
+* The D360 AI tool-calling loop is tested with a fake engine, and the HTTPS client is tested with a stubbed network.
 * Each test module gets a fresh SQLite database with the seeded sample data.
 
 **Latest run:** 67 passed, 0 failed, in 5.4 s (Python 3.12.10, Windows 11).
@@ -85,8 +85,8 @@
 | 47 | Run the scan twice | Alert count is unchanged (no duplicates) | As expected | Pass |
 | 48 | Acknowledge an alert, then acknowledge an unknown alert | Removed from the open list; unknown alert returns 404 | As expected | Pass |
 | 49 | Agent runs logged | Both chat and scan runs appear in the audit log | As expected | Pass |
-| 50 | Azure loop (fake client) | Tool called, answer uses the tool result, tokens summed (200/40), compact tool payload | As expected | Pass |
-| 51 | Azure fails (network error) | Falls back to offline mode with a notice | As expected | Pass |
+| 50 | D360 AI loop (fake engine) | Tool called, answer uses the tool result, tokens summed (200/40), compact tool payload | As expected | Pass |
+| 51 | D360 AI engine fails (network error) | Falls back to offline mode with a notice | As expected | Pass |
 | 52 | Scan with an AI brief | Exactly 1 LLM call | As expected | Pass |
 | 53 | Bad tool arguments (text kW, negative kW, unknown feeder, unknown tool) | Error returned as data | As expected | Pass |
 
@@ -108,7 +108,7 @@
 
 ## Manual and integration testing
 
-These checks ran against the live server (`uvicorn`), with the real Azure OpenAI deployment and the real Open-Meteo API.
+These checks ran against the live server (`uvicorn`), with the real D360 AI engine and the real Open-Meteo API.
 
 | Check | Result |
 |---|---|
@@ -116,7 +116,7 @@ These checks ran against the live server (`uvicorn`), with the real Azure OpenAI
 | Overview for 16 DTRs | 0.37 s |
 | Forecast for DTR-S1-02 using Open-Meteo | `weather_source: open-meteo`; 10 overvoltage risk hours; peak 1.089 pu |
 | Grid-Watch scan without a brief | 1.6 s: 3 saturated, 6 alerts, 9 applications evaluated |
-| Grid-Watch scan with an Azure brief | 537 prompt + 211 completion tokens. Prioritised 4-bullet brief naming DTR-S1-02, N1-03 and S1-04. |
+| Grid-Watch scan with a D360 AI brief | 537 prompt + 211 completion tokens. Prioritised 4-bullet brief naming DTR-S1-02, N1-03 and S1-04. |
 | Copilot: "Can I connect 8 kW rooftop on DTR-S1-04?" | Called `netmeter_feasibility`; answered *partial, 5.0 kW, voltage-bound*. 1,385 + 160 tokens. |
 | Copilot: "Which DTRs are saturated on feeder S1?" | Called `list_dtrs` twice; correct list. 1,477 + 256 tokens. |
 | Telugu scan with brief (`X-Lang: te`) | Summary, alerts and a 4-bullet brief, all in Telugu. 336 + 354 tokens. |
@@ -130,12 +130,12 @@ These checks ran against the live server (`uvicorn`), with the real Azure OpenAI
 | B1 | The asset-code validator was attached as `_v_code = field_validator(...)`. Pydantic treats underscore names as private attributes, so the validator never ran and invalid codes were accepted. | Code review before the first run | Rewrote it as an explicit `@field_validator` method on `FeederIn` and `DtrIn` | Test 15 passes |
 | B2 | The `status` query parameter on `GET /api/applications` shadowed the imported `fastapi.status` module. | Code review | Renamed the parameter to `status_filter`, with `Query(alias="status")` | Test 40 passes |
 | B3 | Risk detection found no overvoltage in offline mode. The seed gave small DTRs too few consumers to reach their target PV penetration, so DTR-S1-02 stayed below the 1.06 pu limit. | Test 28 failed on the first run | Set a minimum of 24 consumers per DTR in the seed and raised S1-02 to a legacy over-sanctioned 125% | 53/53 pass |
-| B4 | `.env` written by PowerShell has a UTF-8 BOM, which would corrupt the first key name. | Review of the env loader | The loader now reads `.env` with `utf-8-sig` | Server starts with Azure enabled |
+| B4 | `.env` written by PowerShell has a UTF-8 BOM, which would corrupt the first key name. | Review of the env loader | The loader now reads `.env` with `utf-8-sig` | Server starts with the D360 AI engine enabled |
 | B5 | `datetime.utcnow()` is deprecated in Python 3.12, so the forecast cache produced a warning. | Code review | Switched to timezone-aware `datetime.now(timezone.utc)` | Warning gone |
 
 ## Retesting performed
 
-The full suite was re-run after each fix: 52/53 passed before the B3 fix and 53/53 after. The live end-to-end check with Azure and Open-Meteo was repeated after the final seed change.
+The full suite was re-run after each fix: 52/53 passed before the B3 fix and 53/53 after. The live end-to-end check with the D360 AI engine and Open-Meteo was repeated after the final seed change.
 
 ## Remaining issues and limitations
 

@@ -143,7 +143,7 @@ POST /api/agent/chat
 {"message": "Can DTR-S1-04 take an 8 kW rooftop system?"}
 
 200 {"answer": "- DTR-S1-04: 8 kW is not fully feasible ... Recommended clearance: 5.0 kW ...",
-     "tools_used": ["netmeter_feasibility"], "mode": "azure",
+     "tools_used": ["netmeter_feasibility"], "mode": "d360",
      "usage": {"prompt_tokens": 1385, "completion_tokens": 160}}
 ```
 
@@ -175,6 +175,6 @@ The agent can call these 7 tools. All of them are read-only.
 
 | API | Used for | Auth | Request |
 |---|---|---|---|
-| Azure OpenAI Chat Completions | Copilot reasoning and the scan brief | `api-key` from `AZURE_OPENAI_API_KEY` | `POST {endpoint}/openai/deployments/{deployment}/chat/completions?api-version=...` with `tools`, `max_completion_tokens` and `reasoning_effort` |
+| D360 AI engine | Copilot reasoning and the scan brief | `api-key` header from `D360_AI_API_KEY` | `POST {D360_AI_ENDPOINT}` with `messages`, `tools`, `max_completion_tokens` and `reasoning_effort` |
 | Open-Meteo Forecast | Hourly GHI, temperature and cloud cover | none | `GET https://api.open-meteo.com/v1/forecast?latitude=..&longitude=..&hourly=shortwave_radiation,temperature_2m,cloud_cover&forecast_days=3&timezone=Asia/Kolkata`. Cached in the `weather` table for 3 hours. |
 | Webhook (optional) | Critical alert notifications | URL secret | `POST NOTIFY_WEBHOOK_URL {"text": "..."}` |

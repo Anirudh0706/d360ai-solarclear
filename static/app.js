@@ -15,7 +15,7 @@ function t(key, vars = {}) {
 }
 // Server text: use the Telugu copy when the UI is in Telugu and one exists.
 const pick = (obj, field) => (state.lang === "te" && obj[`${field}_te`]) || obj[field] || "";
-const modeName = (m) => (m === "azure" ? t("engine.azure") : t("engine.offlineName"));
+const modeName = (m) => (m === "d360" ? t("engine.d360") : t("engine.offlineName"));
 
 async function loadLocales() {
   const [en, te] = await Promise.all(["en", "te"].map((l) => fetch(`/static/locales/${l}.json`).then((r) => r.json())));
